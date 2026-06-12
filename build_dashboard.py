@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 """Build single-page weekly report dashboard HTML."""
-import json, os
+import json, os, sys
 
-BASE = 'D:/workbuddykongjian/2026-06-11-10-36-28'
+# Usage: python build_dashboard.py [data_directory]
+# If no argument, looks for extracted_data.json in current directory
+BASE = sys.argv[1] if len(sys.argv) > 1 else '.'
 with open(f'{BASE}/extracted_data.json', 'r', encoding='utf-8') as f:
     d = json.load(f)
 

@@ -2,7 +2,8 @@
 """Generate W23 weekly analysis reports from extracted data."""
 import json
 
-with open('D:/workbuddykongjian/2026-06-11-10-36-28/extracted_data.json', 'r', encoding='utf-8') as f:
+_base = sys.argv[1] if len(sys.argv) > 1 else '.'
+with open(f'{_base}/extracted_data.json', 'r', encoding='utf-8') as f:
     d = json.load(f)
 
 # ====== EXTRACT KEY METRICS ======
@@ -973,18 +974,18 @@ def gen_report3():
 
 
 # ====== WRITE REPORTS ======
-base = 'D:/workbuddykongjian/2026-06-11-10-36-28'
+# base var removed - now using _base from command line arg
 
-with open(f'{base}/W23周报深度分析报告.html', 'w', encoding='utf-8') as f:
+with open(f'{_base}/W23周报深度分析报告.html', 'w', encoding='utf-8') as f:
     f.write(gen_report1())
 print("Report 1 written: W23周报深度分析报告.html")
 
-with open(f'{base}/W23周分析_改善策略.html', 'w', encoding='utf-8') as f:
+with open(f'{_base}/W23周分析_改善策略.html', 'w', encoding='utf-8') as f:
     f.write(gen_report2())
 print("Report 2 written: W23周分析_改善策略.html")
 
 txt_content = gen_report3()
-with open(f'{base}/W23周报分析稿.txt', 'w', encoding='utf-8') as f:
+with open(f'{_base}/W23周报分析稿.txt', 'w', encoding='utf-8') as f:
     f.write(txt_content)
 print("Report 3 written: W23周报分析稿.txt")
 
