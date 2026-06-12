@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>W23 周报深度分析 | 6大问题点 + 机会点</title>
+<style>
+  :root { --bg: #f5f6f8; --card-bg: #ffffff; --text: #1a1a2e; --text-secondary: #5a5a7a;
+    --border: #e8ecf1; --red: #e74c3c; --green: #27ae60; --blue: #2563eb;
+    --orange: #f59e0b; --accent: #3b82f6; }
+  * { margin:0;padding:0;box-sizing:border-box; }
+  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif; background:var(--bg); color:var(--text); line-height:1.7; }
+  .report { max-width:1150px; margin:0 auto; padding:24px 20px 60px; }
+  .header { background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%); color:white; padding:32px 36px; border-radius:16px; margin-bottom:24px; }
+  .header h1 { font-size:26px; font-weight:700; }
+  .header .meta { font-size:14px; opacity:.85; margin-top:6px; }
+  .header .kpi-strip { display:flex; gap:24px; margin-top:18px; flex-wrap:wrap; }
+  .header .kpi-strip .item { text-align:center; min-width:80px; }
+  .header .kpi-strip .val { font-size:22px; font-weight:800; color:#fbbf24; }
+  .header .kpi-strip .lbl { font-size:11px; opacity:.7; }
+  .section { background:var(--card-bg); border-radius:14px; padding:28px 32px; margin-bottom:18px; box-shadow:0 1px 3px rgba(0,0,0,.04); border:1px solid var(--border); }
+  .section h2 { font-size:18px; font-weight:700; margin-bottom:20px; display:flex; align-items:center; gap:10px; }
+  .section h3 { font-size:15px; font-weight:700; margin-bottom:12px; }
+  .kpi-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:14px; }
+  .kpi-card { background:#f9fafb; border-radius:10px; padding:16px; border:1px solid var(--border); }
+  .kpi-card .label { font-size:12px; color:var(--text-secondary); margin-bottom:4px; }
+  .kpi-card .value { font-size:22px; font-weight:700; }
+  .kpi-card .change { font-size:13px; margin-top:4px; }
+  .up { color:#e74c3c; font-weight:600; }
+  .down { color:#27ae60; font-weight:600; }
+  .tag { display:inline-block; padding:2px 10px; border-radius:20px; font-size:12px; font-weight:600; }
+  .tag-up { background:#fee2e2; color:#991b1b; }
+  .tag-down { background:#d1fae5; color:#065f46; }
+  .tag-warn { background:#fef3c7; color:#92400e; }
+  .tag-info { background:#dbeafe; color:#1e40af; }
+  .problem-card { background:#fef2f2; border-left:5px solid #ef4444; border-radius:10px; padding:18px 22px; margin-bottom:16px; }
+  .problem-card .pnum { display:inline-block; background:#ef4444; color:white; width:28px; height:28px; border-radius:50%; text-align:center; line-height:28px; font-weight:800; font-size:14px; margin-right:10px; vertical-align:middle; }
+  .problem-card h3 { display:inline; font-size:16px; color:#991b1b; }
+  .problem-card .loss-tag { background:#fecaca; display:inline-block; padding:2px 10px; border-radius:4px; font-weight:700; color:#7f1d1d; font-size:13px; margin:8px 0; }
+  .problem-card .data-box { background:white; border-radius:8px; padding:12px 16px; margin:10px 0; font-size:13px; }
+  .problem-card .data-box td { padding:3px 12px 3px 0; font-size:13px; }
+  .problem-card .cause { margin-top:8px; font-size:13.5px; line-height:1.8; }
+  .problem-card .cause b { color:#991b1b; }
+  .opp-card { background:#f0fdf4; border-left:5px solid #22c55e; border-radius:10px; padding:18px 22px; margin-bottom:16px; }
+  .opp-card .onum { display:inline-block; background:#22c55e; color:white; width:28px; height:28px; border-radius:50%; text-align:center; line-height:28px; font-weight:800; font-size:14px; margin-right:10px; vertical-align:middle; }
+  .opp-card h3 { display:inline; font-size:16px; color:#065f46; }
+  .opp-card .action { font-size:13.5px; line-height:1.8; margin-top:8px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { background:#f1f5f9; padding:9px 10px; text-align:center; font-weight:600; color:var(--text-secondary); font-size:12px; border-bottom:2px solid var(--border); }
+  td { padding:9px 10px; text-align:center; border-bottom:1px solid var(--border); }
+  tr:nth-child(even) { background:#fafbfc; }
+  td:first-child,th:first-child { text-align:left; font-weight:600; }
+  .td-red { color:var(--red); font-weight:700; }
+  .td-green { color:var(--green); font-weight:700; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  hr { border:none; border-top:1px solid var(--border); margin:16px 0; }
+  .highlight-box { background:linear-gradient(135deg,#eff6ff,#dbeafe); border-radius:12px; padding:16px 20px; margin:14px 0; font-size:14px; }
+  .footer { text-align:center; padding:20px; color:var(--text-secondary); font-size:12px; }
+</style>
+</head>
+<body>
+<div class="report">
+
+<div class="header">
+  <div style="flex:1;">
+    <h1>W23 周报深度分析报告</h1>
+    <div class="meta">奥莱店华南区城市 | W23 (2026.06.01-06.07) | 数据截止 2026.06.07</div>
+  </div>
+  
+<div class="kpi-strip">
+    <div class="item"><div class="val">109.43%</div><div class="lbl">达成率</div></div>
+    <div class="item"><div class="val">¥108,546</div><div class="lbl">周流水</div></div>
+    <div class="item"><div class="val" style="color:#27ae60">-31.62%</div><div class="lbl">SSSG</div></div>
+    <div class="item"><div class="val">¥516</div><div class="lbl">客单价</div></div>
+    <div class="item"><div class="val">18.12%</div><div class="lbl">成交率</div></div>
+    <div class="item"><div class="val">48.1%</div><div class="lbl">鞋占比</div></div>
+</div>
+</div>
+
+<!-- KPI OVERVIEW -->
+<div class="section">
+  <h2>一、本周核心KPI全貌</h2>
+  
+    <div class="kpi-grid">
+        <div class="kpi-card"><div class="label">目标</div><div class="value">¥99,192</div></div>
+        <div class="kpi-card" style="border-color:#22c55e;background:#f0fdf4;"><div class="label">实际流水</div><div class="value">¥108,546</div><div class="change up">达成率 109.43%</div></div>
+        <div class="kpi-card"><div class="label">O2O流水</div><div class="value">¥5,696</div><div class="change">PAD ¥2,737 | 官网O2O ¥2,531 | 占比5.13%</div></div>
+        <div class="kpi-card"><div class="label">成交率</div><div class="value">18.12%</div><div class="change up">同比 -8.37%pp</div></div>
+        <div class="kpi-card"><div class="label">客单价</div><div class="value">¥516</div><div class="change down">同比 -14.12%</div></div>
+        <div class="kpi-card"><div class="label">日均客流</div><div class="value">170人</div><div class="change up">同比 +18.73%</div></div>
+        <div class="kpi-card"><div class="label">连带率</div><div class="value">3.91件</div><div class="change down">同比 -14.35%</div></div>
+        <div class="kpi-card"><div class="label">SSSG</div><div class="value down">-31.62%</div><div class="change">同店同比 -31.62%</div></div>
+        <div class="kpi-card"><div class="label">鞋占比</div><div class="value">48.1%</div><div class="change">鞋库存占比 17.1%</div></div>
+        <div class="kpi-card"><div class="label">折扣率</div><div class="value">44.09%</div><div class="change up">同比 +2.81%pp</div></div>
+        <div class="kpi-card"><div class="label">周交易笔数</div><div class="value">216笔</div><div class="change down">同比 -18.80%</div></div>
+        <div class="kpi-card" style="border-color:#f59e0b;background:#fffbeb;"><div class="label">件单价</div><div class="value">¥132</div><div class="change up">同比 +0.27%</div></div>
+    </div>
+</div>
+
+<!-- 同比/环比矩阵 -->
+<div class="section">
+  <h2>KPI同比/环比对比矩阵</h2>
+  <table>
+    <thead><tr><th>指标</th><th>本周值</th><th>同比</th><th>环比</th><th>趋势</th></tr></thead>
+    <tbody>
+    <tr><td>流水达成率</td><td>109.43%</td><td class="td-green">-31.62%</td><td class="td-green">-28.50%</td><td><span class="tag tag-down">⬇️</span></td></tr>
+    <tr><td>成交率</td><td>18.12%</td><td class="td-red">-8.37%pp</td><td class="td-red">-0.10%pp</td><td><span class="tag tag-down">⬇️</span></td></tr>
+    <tr><td>日均客流</td><td>170人</td><td class="td-green">+18.73%</td><td class="td-red">-9.49%</td><td><span class="tag tag-up">⬆️</span></td></tr>
+    <tr><td>客单价</td><td>¥516</td><td class="td-red">-14.12%</td><td class="td-red">-19.90%</td><td><span class="tag tag-down">⬇️</span></td></tr>
+    <tr><td>连带率</td><td>3.91件</td><td class="td-red">-14.35%</td><td class="td-red">-30.91%</td><td><span class="tag tag-down">⬇️</span></td></tr>
+    <tr><td>件单价</td><td>¥132</td><td class="td-green">+0.27%</td><td class="td-green">+15.95%</td><td><span class="tag tag-up">⬆️</span></td></tr>
+    <tr><td>折扣率</td><td>44.09%</td><td class="td-red">+2.81%pp</td><td class="td-red">+7.39%pp</td><td><span class="tag tag-down">⬇️</span></td></tr>
+    <tr><td>O2O流水</td><td>¥5,696</td><td>--</td><td class="td-green">+27.25%</td><td><span class="tag tag-info">O2O环比</span></td></tr>
+    <tr><td>SSSG</td><td>-31.62%</td><td class="td-red">-31.62%</td><td class="td-red">-28.50%</td><td><span class="tag tag-down">⬇️</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 日别趋势 -->
+<div class="section">
+  <h2>日别销售趋势</h2>
+  <table>
+    <thead><tr><th>日期</th><th>目标</th><th>实际流水</th><th>达成率</th><th>同比</th><th>成交率</th><th>客流</th><th>客单价</th></tr></thead>
+    <tbody>
+      
+        <tr style="background:#f0fdf4;">
+            <td>周一</td>
+            <td>¥8,803.63</td>
+            <td>¥17,799.00</td>
+            <td class="td-red">202.2%</td>
+            <td class="td-green">-52.0%</td>
+            <td>17.86%</td>
+            <td>168</td>
+            <td>597.90</td>
+        </tr>
+        <tr >
+            <td>周二</td>
+            <td>¥8,324.64</td>
+            <td>¥10,013.00</td>
+            <td class="">120.3%</td>
+            <td class="td-green">-43.5%</td>
+            <td>15.25%</td>
+            <td>118</td>
+            <td>553.72</td>
+        </tr>
+        <tr >
+            <td>周三</td>
+            <td>¥9,153.44</td>
+            <td>¥11,140.00</td>
+            <td class="">121.7%</td>
+            <td class="td-green">-45.6%</td>
+            <td>13.39%</td>
+            <td>112</td>
+            <td>642.93</td>
+        </tr>
+        <tr >
+            <td>周四</td>
+            <td>¥9,970.55</td>
+            <td>¥12,679.00</td>
+            <td class="">127.2%</td>
+            <td class="td-green">-18.4%</td>
+            <td>20.22%</td>
+            <td>89</td>
+            <td>689.83</td>
+        </tr>
+        <tr >
+            <td>周五</td>
+            <td>¥11,559.09</td>
+            <td>¥12,225.00</td>
+            <td class="">105.8%</td>
+            <td class="td-red">+10.9%</td>
+            <td>17.07%</td>
+            <td>164</td>
+            <td>465.14</td>
+        </tr>
+        <tr style="background:#fef2f2;">
+            <td>周六</td>
+            <td>¥26,280.10</td>
+            <td>¥13,584.82</td>
+            <td class="td-green">51.7%</td>
+            <td class="td-green">-51.1%</td>
+            <td>17.68%</td>
+            <td>198</td>
+            <td>476.40</td>
+        </tr>
+        <tr >
+            <td>周日</td>
+            <td>¥25,100.25</td>
+            <td>¥31,104.73</td>
+            <td class="">123.9%</td>
+            <td class="td-green">-4.6%</td>
+            <td>20.99%</td>
+            <td>343</td>
+            <td>441.85</td>
+        </tr>
+      <tr style="font-weight:700;background:#f1f5f9;">
+        <td>合计</td><td>¥99,191.69</td><td>¥108,545.55</td><td>109.4%</td><td>-31.6%</td><td>18.12%</td><td>170</td><td>516.09</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<hr>
+
+<!-- PROBLEMS -->
+<div class="section" style="border-top:3px solid #ef4444;">
+  <h2>二、六大关键问题点</h2>
+</div>
+
+    <!-- PROBLEM 1 -->
+    <div class="problem-card">
+      <span class="pnum">1</span><h3>整体流水同比暴跌-31.62% — 业绩断崖式下滑</h3>
+      <div class="loss-tag">周流水同比流失 ≈ ¥50,198</div>
+      <div class="data-box">
+        <table><tr>
+          <td>本周流水 <b>¥108,546</b></td><td>同比 <b style="color:#ef4444;">-31.62%</b></td>
+          <td>达成率 <b>109.43%</b></td>
+          <td>（达标但同比大幅下降）</td>
+        </tr><tr>
+          <td>成交率 <b>18.12%</b>（同比-8.37pp）</td>
+          <td>客单价 <b>¥516</b>（同比-14.12%）</td>
+          <td>连带率 <b>3.91</b>（同比-14.35%）</td>
+          <td>三项核心指标同步下滑</td>
+        </tr></table>
+        <div style="margin-top:6px;font-size:12px;color:var(--text-secondary);">
+          若恢复到去年同期：周流水应达 ¥158,744，差距 <b>¥50,198</b>
+        </div>
+      </div>
+      <div class="cause">
+        <b>产生原因：</b><br>
+        1. <b>折扣率持续走高至44.09%</b>（同比+2.81pp、环比+7.39pp），越打折越卖不动，说明不是价格问题而是<b>客流质量和产品吸引力下降</b>；<br>
+        2. 成交率18.12%（同比-8.37pp），进店100人中仅18人成交，<b>转化效率恶化</b>；<br>
+        3. 奥莱店定位+44%综合折扣率，但同比仍跌31%，说明<b>客群在流失或消费降级</b>；<br>
+        4. 作为6月第一周，去年此时可能是618/端午等活动拉动，<b>今年营销节奏不足</b>。
+      </div>
+    </div>
+
+    <!-- PROBLEM 2 -->
+    <div class="problem-card">
+      <span class="pnum">2</span><h3>周六崩盘 — 达成率仅51.69%，单日损失过万</h3>
+      <div class="loss-tag">预计损失 ≈ ¥21,024（周六流水仅占目标的51.69%）</div>
+      <div class="data-box">
+        <table><tr>
+          <td>周六目标 <b>¥26,280</b></td><td>实际 <b style="color:#ef4444;">¥13,585</b></td>
+          <td>达成率 <b style="color:#ef4444;">51.7%</b></td>
+          <td>同比 <b style="color:#ef4444;">-51.1%</b></td>
+        </tr><tr>
+          <td>周六成交量 <b>198</b>人</td><td>成交率 <b>17.68%</b></td>
+          <td>客单价 <b>476.40</b></td>
+          <td>（全周唯一达成率低于60%的日）</td>
+        </tr></table>
+        <div style="margin-top:6px;font-size:12px;color:var(--text-secondary);">
+          周六通常应贡献周流水25-30%，本周仅占12.5%。若恢复正常达成100%，可增 <b>¥12,695</b>
+        </div>
+      </div>
+      <div class="cause">
+        <b>产生原因：</b><br>
+        1. 周六目标26280.1是平日目标的2.5倍，<b>目标设定过高</b>不切实际；<br>
+        2. 周六客流仅198人（不及周日343人的60%），<b>客流未达预期</b>；<br>
+        3. 周六客单价476.4元、连带率3.54，均明显低于周四峰值（689.83元/5.33件），<b>导购周末工作效率下降</b>；<br>
+        4. 可能受商场活动/竞品促销/天气等外部因素影响。
+      </div>
+    </div>
+
+    <!-- PROBLEM 3 -->
+    <div class="problem-card">
+      <span class="pnum">3</span><h3>所有品类同比全面下挫 — 鞋类-43.63%最严重</h3>
+      <div class="loss-tag">四品类合计同比流失严重，无一幸免</div>
+      <div class="data-box">
+        <table>
+          <tr><th>品类</th><th>流水</th><th>同比</th><th>环比</th><th>折扣率</th><th>鞋/配每SKU产出</th></tr>
+          <tr><td>男装</td><td>¥78,357</td><td class="td-green">-31.42%</td><td class="td-green">-20.33%</td><td>43.93%</td><td>--</td></tr>
+          <tr><td>女装</td><td>¥21,694</td><td class="td-green">-42.22%</td><td class="td-green">-53.55%</td><td>44.06%</td><td>--</td></tr>
+          <tr style="background:#fee2e2;"><td>鞋类</td><td>¥52,241</td><td class="td-green"><b>-43.63%</b></td><td class="td-green"><b>-45.31%</b></td><td>44.03%</td><td>¥421</td></tr>
+          <tr><td>配件</td><td>¥46,620</td><td class="td-green">-22.21%</td><td class="td-red">+0.26%</td><td>44.78%</td><td>¥170</td></tr>
+        </table>
+      </div>
+      <div class="cause">
+        <b>产生原因：</b><br>
+        1. 鞋类同比-43.63%、环比-45.31%，作为核心品类失速最严重，<b>鞋类SKU动销率仅35.84%</b>，大量SKU躺平；<br>
+        2. 配件每SKU产出仅¥170（vs 鞋¥421），<b>275个配件在售SKU中40%未动销</b>；<br>
+        3. 四品类折扣率均在43-45%区间，<b>同质化打折无法形成差异化竞争</b>；<br>
+        4. 各品类环比也全面下滑（除配件微增0.26%），说明<b>下滑趋势在加速而非改善</b>。
+      </div>
+    </div>
+
+    <!-- PROBLEM 4 -->
+    <div class="problem-card">
+      <span class="pnum">4</span><h3>客单价与连带率双降 — 低客单、低效率交易驱动</h3>
+      <div class="loss-tag">若客单价恢复至600元水平，周增量 ≈ ¥21,054</div>
+      <div class="data-box">
+        <table>
+          <tr><th>指标</th><th>本周</th><th>同比</th><th>环比</th><th>解读</th></tr>
+          <tr><td>客单价</td><td class="td-green">¥516</td><td class="td-green">-14.12%</td><td class="td-green">-19.90%</td><td>持续下行</td></tr>
+          <tr><td>连带率</td><td class="td-green">3.91件</td><td class="td-green">-14.35%</td><td class="td-green">-30.91%</td><td>大幅下滑</td></tr>
+          <tr><td>件单价</td><td class="td-red">¥132</td><td class="td-red">+0.27%</td><td class="td-red">+15.95%</td><td>基本持平</td></tr>
+          <tr style="background:#fffbeb;"><td><b>隐含问题</b></td><td colspan="4">客单价降14.12% = 连带率降14.35% × 件单价持平，说明<b>连带效率严重下降</b>，每单多卖的能力在减弱</td></tr>
+        </table>
+      </div>
+      <div class="cause">
+        <b>产生原因：</b><br>
+        1. 连带率从同期4.57降至3.91，<b>每笔少卖0.66件</b>，导购推荐和搭配销售能力下降；<br>
+        2. 工作日（周三除外）连带率均低于4.0，周末更只有3.54/3.39，<b>周末客流多但连带反而差</b>；<br>
+        3. 折扣率44.09%说明大量商品折价出售，<b>顾客更倾向于购买折扣单品而非多件搭配</b>；<br>
+        4. 奥莱店定位导致顾客期望低价，<b>连带提升空间被价格预期压制</b>。
+      </div>
+    </div>
+
+    <!-- PROBLEM 5 -->
+    <div class="problem-card">
+      <span class="pnum">5</span><h3>折扣率44.09%持续走高 — 越打折越卖不动</h3>
+      <div class="loss-tag">折扣率同比+2.81pp、环比+7.39pp，但流水同比-31.62%</div>
+      <div class="data-box">
+        <table>
+          <tr><th>折扣区间</th><th>数量</th><th>占比</th></tr>
+          <tr style="background:#fee2e2;"><td>5折以下</td><td>数量</td><td>占比</td></tr>
+          <tr><td>5-6折</td><td>数量</td><td>占比</td></tr>
+          <tr><td>6-7折</td><td>数量</td><td>占比</td></tr>
+          <tr><td>7-8折</td><td>数量</td><td>占比</td></tr>
+          <tr><td>8折以上</td><td>数量</td><td>占比</td></tr>
+        </table>
+      </div>
+      <div class="cause">
+        <b>产生原因：</b><br>
+        1. 折扣率44.09%意味着<b>平均5.6折出售</b>，品牌价值被稀释；<br>
+        2. 折扣率环比+7.39pp说明<b>近期加大了打折力度</b>，但流水环比-28.50%，打折并未带来额外销售；<br>
+        3. 奥莱店虽然本身就是折扣渠道，但44%的综合折扣仍然偏高，<b>折扣下沉空间有限</b>；<br>
+        4. <b>顾客对"奥莱=常年打折"形成预期</b>，非打折商品难以动销，形成"不打折就卖不动"的恶性循环。
+      </div>
+    </div>
+
+    <!-- PROBLEM 6 -->
+    <div class="problem-card">
+      <span class="pnum">6</span><h3>新品表现乏力 — 26年常青款折扣率高、动销率低</h3>
+      <div class="loss-tag">26年常青(服)折扣率54.85%，动销率仅64.58%</div>
+      <div class="data-box">
+        <table>
+          <tr><th>季节</th><th>流水</th><th>折扣率</th><th>动销率</th><th>可满足率</th></tr>
+          <tr><td>26年常青(服)</td><td>¥6,726</td><td>54.85%</td><td>64.58%</td><td>2.08%</td></tr>
+          <tr><td>26年常青(鞋)</td><td>¥13,340</td><td>54.82%</td><td>49.41%</td><td>6.49%</td></tr>
+          <tr><td>2026Q2(服)</td><td>¥12,138</td><td>59.19%</td><td>45.38%</td><td>4.55%</td></tr>
+        </table>
+      </div>
+      <div class="cause">
+        <b>产生原因：</b><br>
+        1. 26年常青(服)折扣率54.85%（约4.5折），新品即打折，<b>新品价值感知弱</b>；<br>
+        2. 2026Q2服装折扣率59.19%（约4折），<b>当季新品也需大幅让利才能卖</b>；<br>
+        3. 新品动销率普遍在45-65%之间，<b>35-55%的新品SKU一周内0销售</b>；<br>
+        4. 新品可满足率仅2-6%，说明<b>新品备货极度保守</b>，不敢深库存→不敢推→卖不动→继续打折的恶性循环。
+      </div>
+    </div>
+    
+
+<!-- 品类速览 -->
+<div class="section">
+  <h2>品类结构速览</h2>
+  <div class="grid2">
+    <div>
+      <table>
+        <thead><tr><th>品类</th><th>流水</th><th>销售占比</th><th>销量</th><th>折扣率</th><th>同比</th><th>库存数量</th><th>库存占比</th><th>匹配分析</th></tr></thead>
+        <tbody>
+        <tr>
+            <td>男装</td>
+            <td>¥78,357</td>
+            <td>72.19%</td>
+            <td>618</td>
+            <td>43.93%</td>
+            <td class="td-green">-31.42%</td>
+            <td>13756</td>
+            <td>37.56%</td>
+            <td class="td-red">销>库 +34.6pp</td>
+            <td>⬇️</td>
+        </tr>
+        <tr>
+            <td>女装</td>
+            <td>¥21,694</td>
+            <td>19.99%</td>
+            <td>182</td>
+            <td>44.06%</td>
+            <td class="td-green">-42.22%</td>
+            <td>5843</td>
+            <td>15.95%</td>
+            <td class="">匹配</td>
+            <td>⬇️</td>
+        </tr>
+        <tr>
+            <td>鞋</td>
+            <td>¥52,241</td>
+            <td>48.13%</td>
+            <td>226</td>
+            <td>44.03%</td>
+            <td class="td-green">-43.63%</td>
+            <td>6271</td>
+            <td>17.12%</td>
+            <td class="td-red">销>库 +31.0pp</td>
+            <td>⬇️</td>
+        </tr>
+        <tr>
+            <td>配件</td>
+            <td>¥46,620</td>
+            <td>42.95%</td>
+            <td>441</td>
+            <td>44.78%</td>
+            <td class="td-green">-22.21%</td>
+            <td>10758</td>
+            <td>29.37%</td>
+            <td class="td-red">销>库 +13.6pp</td>
+            <td>⬇️</td>
+        </tr></tbody>
+      </table>
+    </div>
+    <div class="highlight-box">
+      <strong>鞋每SKU产出 ¥421 vs 配件每SKU产出 ¥170</strong><br>
+      鞋SKU动销率仅35.84%，64%的鞋SKU一周0动销<br>
+      配件40.44%的SKU有动销，但每SKU产出仅¥170<br><br>
+      <strong>鞋占比 48.1%</strong>，鞋库存数量占总库存17.1%<br>
+      鞋库存金额¥334.8万（338个SKU）
+    </div>
+  </div>
+</div>
+
+<hr>
+
+<!-- OPPORTUNITIES -->
+<div class="section" style="border-top:3px solid #22c55e;">
+  <h2>三、六大机会点 & 可落地方案</h2>
+</div>
+
+    <!-- OPP 1 -->
+    <div class="opp-card">
+      <span class="onum">1</span><h3>周六复苏攻坚 — 夺回单日¥12,695增量</h3>
+      <div class="action">
+        <b>目标：</b>周六达成率从51.69%恢复至80%+。<br>
+        <b>方案A — 周五预锁定：</b>周五晚场推"周六专属券：满399-30（限前30单）"，通过企微+短信推送给近30天有消费的会员；<br>
+        <b>方案B — 周六社交引流：</b>"带朋友到店各减20元"裂变活动，利用周末社交场景拉客流；<br>
+        <b>方案C — 周六排班优化：</b>周六下午14-18点安排最强连带能力导购值守高价值区域，设周六单日客单价PK奖，目标客单价从476提升至550+。
+      </div>
+    </div>
+
+    <!-- OPP 2 -->
+    <div class="opp-card">
+      <span class="onum">2</span><h3>流量激活：成交率从18%提升至22%</h3>
+      <div class="action">
+        <b>目标：</b>提升成交率4pp，周增流水≈¥23,856。<br>
+        <b>方案A — 进店三句话标准话术：</b>"欢迎光临，今天鞋/服装新品到店折扣力度最大，您可以先看看"——针对67%不成交的客流，强化进店引导；<br>
+        <b>方案B — 试穿转化激励：</b>"试穿3件以上即送品牌袜子一双"，用低成本的赠品降低顾客试穿门槛；<br>
+        <b>方案C — 收银台"加价购"：</b>结账时推"加¥59换购指定T恤/短裤"，将成交率转化为连带率。
+      </div>
+    </div>
+
+    <!-- OPP 3 -->
+    <div class="opp-card">
+      <span class="onum">3</span><h3>鞋类SKU瘦身+爆款深耕</h3>
+      <div class="action">
+        <b>目标：</b>鞋SKU动销率从35.84%提升至50%+，每SKU产出持平或提升。<br>
+        <b>方案A — 鞋SKU断舍离：</b>从124个在售SKU中筛选连续2周0动销的SKU，申请调出/退货，将陈列面+库存资金转向动销SKU；<br>
+        <b>方案B — TOP20鞋款深耕：</b>锁定销量TOP20鞋款，加库存深度（目标可满足率从36.56%提升至50%+），全店导购话术植入为"本周必推"；<br>
+        <b>方案C — 配件瘦身同步：</b>275个配件SKU中清理0动销SKU，每SKU产出从¥170提升至¥200+。
+      </div>
+    </div>
+
+    <!-- OPP 4 -->
+    <div class="opp-card">
+      <span class="onum">4</span><h3>连带攻坚：从3.91件拉升至4.5件</h3>
+      <div class="action">
+        <b>目标：</b>连带率提升0.6件，周流水增量≈¥16,812。<br>
+        <b>方案A — "1+1+1"搭配法：</b>每位进店顾客导购主动推荐"1件主推品（鞋/外套）+1件搭配品（裤子/短裤）+1件连带品（T恤/袜子）"的完整搭配；<br>
+        <b>方案B — 衣鞋跨界连带：</b>鞋区收银旁陈列"买鞋+¥99换购指定短裤"，服装区旁陈列配套鞋款，用空间引导跨界购买；<br>
+        <b>方案C — 连带即时激励：</b>设置"连带王"奖——单笔超4件奖¥10红包，超6件奖¥20，下班即兑现。
+      </div>
+    </div>
+
+    <!-- OPP 5 -->
+    <div class="opp-card">
+      <span class="onum">5</span><h3>折扣管控：从"全打折"转向"选择性折扣"</h3>
+      <div class="action">
+        <b>目标：</b>综合折扣率控制在42%以内。<br>
+        <b>方案A — 新品保护期：</b>26年常青款前2周不打折，以"本季首发体验价"名义正价销售，2周后根据动销数据决定是否纳入促销；<br>
+        <b>方案B — 分品类折中折：</b>鞋类（占比48%）保持折扣力度，服装（占比20%）适度收紧折扣，用不同品类调节综合折扣率；<br>
+        <b>方案C — 满减替代直降：</b>"满599减60、满999减150"替代"全场X折"，顾客为凑满减增加连带，同时保护品牌价值感知。
+      </div>
+    </div>
+
+    <!-- OPP 6 -->
+    <div class="opp-card">
+      <span class="onum">6</span><h3>O2O渠道发力 + 周日巩固</h3>
+      <div class="action">
+        <b>目标：</b>O2O流水从¥5,696提升至¥8,000+（占比7%+），周日继续保持当前高流水水平。<br>
+        <b>方案A — 周日"老客专享日"：</b>周日是本周最强日（流水31105/达成124%），说明周日客流和购买力都在，<b>重点维护周日会员池</b>：每周日推送"会员专属款"3-5款；<br>
+        <b>方案B — PAD+官网O2O同步推：</b>将线下畅销款同步到线上O2O，门店陈列时标注"线上同款可购"，导购辅助顾客扫码下单；<br>
+        <b>方案C — 将周四峰值模式复制到周三/周五：</b>周四（达成127%/客单价689.83/连带5.33）是全周效率最高日，分析周四成功因素（排班/促销/活动），复制到周三和周五。
+      </div>
+    </div>
+    
+
+<!-- SUMMARY -->
+<div class="section" style="background:linear-gradient(135deg,#1a1a2e,#16213e);color:white;border:none;">
+  <h2 style="color:#fbbf24;">总结：六大问题的逻辑关系</h2>
+  <div style="font-size:15px;line-height:2;opacity:.95;">
+    <p style="margin-bottom:12px;">
+      <span style="background:#ef4444;color:white;padding:4px 14px;border-radius:20px;">P1 同比大跌</span>
+      <span style="color:white;margin:0 8px;">+</span>
+      <span style="background:#ef4444;color:white;padding:4px 14px;border-radius:20px;">P2 周六崩盘</span>
+      <span style="color:white;margin:0 8px;">→</span>
+      <span style="color:#fca5a5;">客流端失血</span>
+    </p>
+    <p style="margin-bottom:12px;">
+      <span style="background:#ef4444;color:white;padding:4px 14px;border-radius:20px;">P3 品类全跌</span>
+      <span style="color:white;margin:0 8px;">+</span>
+      <span style="background:#ef4444;color:white;padding:4px 14px;border-radius:20px;">P5 折扣失控</span>
+      <span style="color:white;margin:0 8px;">→</span>
+      <span style="color:#fca5a5;">品类端失血</span>
+    </p>
+    <p style="margin-bottom:12px;">
+      <span style="background:#ef4444;color:white;padding:4px 14px;border-radius:20px;">P4 客单/连带双降</span>
+      <span style="color:white;margin:0 8px;">+</span>
+      <span style="background:#ef4444;color:white;padding:4px 14px;border-radius:20px;">P6 新品乏力</span>
+      <span style="color:white;margin:0 8px;">→</span>
+      <span style="color:#fca5a5;">效率端失血</span>
+    </p>
+  </div>
+  <div style="margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,.2);">
+    <p style="font-size:15px;line-height:1.9;">
+      <strong style="color:#fca5a5;">三大失血点（客流 → 品类 → 效率）</strong>互为因果：客流质量下降 → 品类全线下滑 → 打折加码但无效 → 连带和客单恶化。<br>
+      破解之道：<strong style="color:#86efac;">周六引流（问题1/2）→ SKU瘦身+深耕（问题3）→ 连带攻坚（问题4）→ 折扣优化（问题5）→ 新品策略+O2O（问题6）</strong>。<br>
+      六项措施联动落地，预计释放 <strong style="color:#fbbf24;">¥15,000-20,000/周</strong> 增量空间。
+    </p>
+  </div>
+</div>
+
+<div class="footer">W23周报深度分析 | 奥莱店华南区城市 | 数据截止 2026.06.07 | AI店长出品</div>
+</div>
+</body>
+</html>

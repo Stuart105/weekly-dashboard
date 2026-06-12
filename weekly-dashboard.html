@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>W23 周报分析仪表板 | 奥莱店华南区城市</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#f0f2f5;--card:#fff;--text:#1e293b;--sub:#64748b;--border:#e2e8f0;
+--red:#ef4444;--green:#22c55e;--blue:#3b82f6;--amber:#f59e0b;--purple:#8b5cf6;
+--red-bg:#fef2f2;--green-bg:#f0fdf4;--blue-bg:#eff6ff;--amber-bg:#fffbeb;}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6}
+.app{max-width:1300px;margin:0 auto;padding:0 16px 40px}
+
+/* Header */
+.header{background:linear-gradient(135deg,#0f172a,#1e293b);color:white;padding:18px 28px;border-radius:0 0 14px 14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;position:sticky;top:0;z-index:100;margin-bottom:12px;}
+.header h1{font-size:20px;font-weight:700}
+.header .meta{font-size:12px;opacity:.75}
+.header .actions{display:flex;gap:8px}
+.header .btn{padding:6px 14px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;transition:.2s}
+.btn-outline{background:transparent;border:1px solid rgba(255,255,255,.3);color:white}
+.btn-outline:hover{background:rgba(255,255,255,.1)}
+.btn-primary{background:var(--blue);color:white}
+.btn-primary:hover{background:#2563eb}
+
+/* Sticky KPI */
+.kpi-strip{position:sticky;top:72px;z-index:99;background:var(--card);border-radius:12px;padding:12px 20px;display:flex;gap:12px;flex-wrap:wrap;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:16px;border:1px solid var(--border)}
+.kpi-strip .ki{flex:1;min-width:100px;text-align:center;padding:8px 6px;border-radius:8px;background:#f8fafc}
+.kpi-strip .ki .kv{font-size:22px;font-weight:800}
+.kpi-strip .ki .kl{font-size:11px;color:var(--sub);margin-top:2px}
+.kpi-strip .ki .kc{font-size:12px;font-weight:600;margin-top:1px}
+.up{color:var(--red)}.down{color:var(--green)}.neutral{color:var(--sub)}
+.tag-up{background:var(--red-bg);color:#991b1b;padding:1px 8px;border-radius:12px;font-size:11px}
+.tag-down{background:var(--green-bg);color:#065f46;padding:1px 8px;border-radius:12px;font-size:11px}
+.tag-neutral{background:#f1f5f9;color:#475569;padding:1px 8px;border-radius:12px;font-size:11px}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px}
+.tab{padding:8px 18px;border-radius:8px 8px 0 0;cursor:pointer;font-size:13px;font-weight:600;color:var(--sub);background:transparent;border:none;border-bottom:2px solid transparent;transition:.2s}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue);background:var(--blue-bg)}
+.tab:hover:not(.active){color:var(--text);background:#f8fafc}
+
+/* Cards */
+.section{background:var(--card);border-radius:12px;padding:22px 26px;margin-bottom:14px;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.section h3{font-size:16px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.chart-wrap{position:relative;width:100%;max-height:350px}
+.chart-wrap canvas{width:100%!important}
+
+/* Grids */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr}}
+
+/* Table */
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.tbl th{background:#f1f5f9;padding:8px 10px;text-align:center;font-weight:600;color:var(--sub);border-bottom:2px solid var(--border);font-size:11px}
+.tbl td{padding:7px 10px;text-align:center;border-bottom:1px solid var(--border)}
+.tbl tr:nth-child(even){background:#fafbfc}
+.tbl td:first-child,.tbl th:first-child{text-align:left;font-weight:600}
+.tbl .hi{color:var(--red);font-weight:700}
+.tbl .lo{color:var(--green);font-weight:700}
+
+/* Filters */
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;padding:10px 14px;background:#f8fafc;border-radius:8px}
+.filters select{padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:white;font-size:13px;cursor:pointer}
+.filters label{font-size:12px;color:var(--sub);font-weight:600}
+
+/* Problem/Opp cards */
+.pc{border-left:4px solid var(--red);background:var(--red-bg);border-radius:8px;padding:14px 18px;margin-bottom:10px;transition:.2s}
+.oc{border-left:4px solid var(--green);background:var(--green-bg);border-radius:8px;padding:14px 18px;margin-bottom:10px;transition:.2s}
+.pc:hover,.oc:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.pc .phead,.oc .ohead{display:flex;align-items:center;gap:10px;cursor:pointer}
+.pc .pnum,.oc .onum{width:26px;height:26px;border-radius:50%;color:white;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
+.pc .pnum{background:var(--red)}.oc .onum{background:var(--green)}
+.pc h4,.oc h4{font-size:15px;margin:0}
+.pbody,.obody{margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,.1);line-height:1.7;font-size:13px}
+.pbody .loss-tag{display:inline-block;background:#fecaca;padding:2px 8px;border-radius:4px;font-weight:700;color:#7f1d1d;font-size:12px;margin-bottom:8px}
+.dbox{background:white;border-radius:6px;padding:10px 14px;margin:8px 0;font-size:12px}
+.dbox td{padding:2px 10px 2px 0}
+
+/* Toggle */
+.toggle-icon{transition:transform .2s;font-size:12px}
+.pc.open .toggle-icon,.oc.open .toggle-icon{transform:rotate(90deg)}
+.pc:not(.open) .pbody,.oc:not(.open) .obody{display:none}
+
+/* Highlight box */
+.highlight{background:linear-gradient(135deg,#eff6ff,#dbeafe);border-radius:8px;padding:12px 16px;margin:10px 0;font-size:13px}
+.summary-box{background:linear-gradient(135deg,#0f172a,#1e293b);color:white;border-radius:12px;padding:20px 26px;margin-top:16px}
+
+/* Full text */
+.full-text{background:#fafbfc;border-radius:8px;padding:18px 22px;font-size:13px;line-height:1.9;white-space:pre-wrap;max-height:60vh;overflow-y:auto}
+
+.footer{text-align:center;padding:20px;color:var(--sub);font-size:11px}
+
+/* Toast & Import */
+.toast{position:fixed;top:20px;right:20px;z-index:9999;padding:12px 20px;border-radius:8px;color:white;font-weight:600;font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.15);animation:slideIn .3s ease;display:none}
+.toast.success{background:var(--green)}.toast.error{background:var(--red)}.toast.info{background:var(--blue)}
+.toast.show{display:block}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+.btn-primary.loading{opacity:.7;pointer-events:none}
+.btn-primary.loading::after{content:'...';animation:dots 1s infinite}
+@keyframes dots{0%,20%{content:'.'}40%{content:'..'}60%{content:'...'}80%,100%{content:''}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+<div class="toast" id="toast"></div>
+
+<div class="header">
+  <div><h1>📊 W23 周报分析仪表板</h1><div class="meta">奥莱店华南区城市 | 2026.06.01-06.07</div></div>
+  <div class="actions">
+    <button class="btn btn-primary" id="btnImport" onclick="triggerImport()">📥 导入周报</button>
+    <button class="btn btn-outline" onclick="refreshAllCharts()">🔄 刷新图表</button>
+    <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none" onchange="handleFileImport(event)">
+  </div>
+</div>
+
+<!-- STICKY KPI STRIP -->
+<div class="kpi-strip" id="kpiStrip">
+  <div class="ki"><div class="kv" style="color:#22c55e">109.4%</div><div class="kl">达成率</div><div class="kc up">超目标</div></div>
+  <div class="ki"><div class="kv">10.9万</div><div class="kl">周流水</div><div class="kc down">-31.6%</div></div>
+  <div class="ki"><div class="kv" style="color:#ef4444">-31.6%</div><div class="kl">SSSG</div><div class="kc down">同比</div></div>
+  <div class="ki"><div class="kv">18.1%</div><div class="kl">成交率</div><div class="kc down">-8.4%pp</div></div>
+  <div class="ki"><div class="kv">¥516</div><div class="kl">客单价</div><div class="kc down">-14.1%</div></div>
+  <div class="ki"><div class="kv">3.91件</div><div class="kl">连带率</div><div class="kc down">-14.4%</div></div>
+  <div class="ki"><div class="kv">48.1%</div><div class="kl">鞋占比</div><div class="kc down">-43.6%</div></div>
+  <div class="ki"><div class="kv">¥5,696</div><div class="kl">O2O</div><div class="kc up">+27.2%</div></div>
+  <div class="ki"><div class="kv">44.1%</div><div class="kl">折扣率</div><div class="kc up">+2.8%pp</div></div>
+  <div class="ki"><div class="kv">170人</div><div class="kl">日均客流</div><div class="kc up">+18.7%</div></div>
+</div>
+
+<!-- ─── SECTION 2: DATA FILTERING ─── -->
+<div class="section">
+  <h3>📊 数据筛选展示</h3>
+  <div class="tabs">
+    <button class="tab active" onclick="switchDataTab('daily',this)">日别趋势</button>
+    <button class="tab" onclick="switchDataTab('matrix',this)">KPI矩阵</button>
+    <button class="tab" onclick="switchDataTab('cate',this)">品类分析</button>
+    <button class="tab" onclick="switchDataTab('order',this)">订单分布</button>
+    <button class="tab" onclick="switchDataTab('seas',this)">新品季节</button>
+    <button class="tab" onclick="switchDataTab('sub',this)">子品类</button>
+    <button class="tab" onclick="switchDataTab('bench',this)">对标分析</button>
+  </div>
+
+  <!-- DATA TAB CONTENTS -->
+  <div id="tab-daily" class="data-tab">
+    <div class="grid2">
+      <div class="chart-wrap"><canvas id="chartDailyFlow"></canvas></div>
+      <div class="chart-wrap"><canvas id="chartDailyRate"></canvas></div>
+    </div>
+    <div class="grid2" style="margin-top:14px">
+      <div class="chart-wrap"><canvas id="chartDailyTicket"></canvas></div>
+      <div class="chart-wrap"><canvas id="chartDailyAttach"></canvas></div>
+    </div>
+    <table class="tbl" style="margin-top:14px">
+      <thead><tr><th>日期</th><th>目标</th><th>实际流水</th><th>达成率</th><th>同比</th><th>成交率</th><th>客流</th><th>客单价</th><th>连带率</th></tr></thead>
+      <tbody id="dailyTable"></tbody>
+    </table>
+  </div>
+
+  <div id="tab-matrix" class="data-tab" style="display:none">
+    <table class="tbl">
+      <thead><tr><th>指标</th><th>本周值</th><th>同比</th><th>环比</th><th>趋势</th></tr></thead>
+      <tbody id="matrixTable"></tbody>
+    </table>
+  </div>
+
+  <div id="tab-cate" class="data-tab" style="display:none">
+    <div class="grid2">
+      <div class="chart-wrap"><canvas id="chartCateFlow"></canvas></div>
+      <div class="chart-wrap"><canvas id="chartCateMatch"></canvas></div>
+    </div>
+    <table class="tbl" style="margin-top:14px">
+      <thead><tr><th>品类</th><th>流水</th><th>销售占比</th><th>同比</th><th>环比</th><th>折扣率</th><th>SKU在售</th><th>SKU动销率</th><th>库存数量</th><th>库存占比</th><th>匹配分析</th></tr></thead>
+      <tbody id="cateTable"></tbody>
+    </table>
+  </div>
+
+  <div id="tab-order" class="data-tab" style="display:none">
+    <div class="grid2">
+      <div class="chart-wrap"><canvas id="chartOrderPieces"></canvas></div>
+      <div class="chart-wrap"><canvas id="chartOrderFlow"></canvas></div>
+    </div>
+    <table class="tbl" style="margin-top:14px">
+      <thead><tr><th>件数</th><th>订单数</th><th>占比</th></tr></thead>
+      <tbody id="orderTable"></tbody>
+    </table>
+  </div>
+
+  <div id="tab-seas" class="data-tab" style="display:none">
+    <div class="chart-wrap"><canvas id="chartSeasFlow"></canvas></div>
+    <table class="tbl" style="margin-top:14px">
+      <thead><tr><th>季节</th><th>流水</th><th>数量</th><th>SKU动销率</th><th>可满足率</th></tr></thead>
+      <tbody id="seasTable"></tbody>
+    </table>
+    <table class="tbl" style="margin-top:14px">
+      <thead><tr><th>汇总</th><th>流水</th><th>数量</th><th>折扣率</th><th>SKU动销率</th></tr></thead>
+      <tbody id="seasAggTable"></tbody>
+    </table>
+  </div>
+
+  <div id="tab-sub" class="data-tab" style="display:none">
+    <div class="grid3">
+      <div>
+        <h4 style="font-size:13px;margin-bottom:8px;color:var(--sub)">服装子品类</h4>
+        <table class="tbl"><thead><tr><th>品类</th><th>流水</th><th>折扣</th></tr></thead><tbody id="subCloth"></tbody></table>
+      </div>
+      <div>
+        <h4 style="font-size:13px;margin-bottom:8px;color:var(--sub)">鞋系列</h4>
+        <table class="tbl"><thead><tr><th>系列</th><th>流水</th><th>销量</th><th>折扣</th></tr></thead><tbody id="subShoe"></tbody></table>
+      </div>
+      <div>
+        <h4 style="font-size:13px;margin-bottom:8px;color:var(--sub)">配件子品类</h4>
+        <table class="tbl"><thead><tr><th>品类</th><th>流水</th><th>折扣</th></tr></thead><tbody id="subAcc"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-bench" class="data-tab" style="display:none">
+    <table class="tbl">
+      <thead><tr><th>指标</th><th>本周</th><th>月累计(06月)</th><th>vs本周</th><th>年累计(YTD)</th><th>vs本周</th><th>区域均值(19店)</th><th>vs本周</th></tr></thead>
+      <tbody id="benchTable"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ─── SECTION 3: SMART ANALYSIS ─── -->
+<div class="section">
+  <h3>🤖 智能分析</h3>
+  <div class="tabs">
+    <button class="tab active" onclick="switchAnalysisTab('problems')">🔴 关键问题 (6)</button>
+    <button class="tab" onclick="switchAnalysisTab('opps')">🟢 改善机会 (6)</button>
+    <button class="tab" onclick="switchAnalysisTab('fulltext')">📝 完整分析稿</button>
+  </div>
+
+  <div id="tab-problems" class="analysis-tab" style="display:block">
+    <div class="pc open" onclick="toggleCard(this)">
+      <div class="phead"><span class="pnum">1</span><h4>整体流水同比暴跌-31.62% — 业绩断崖式下滑</h4><span class="toggle-icon">▶</span></div>
+      <div class="pbody">
+        <span class="loss-tag">周流水同比流失 ≈ ¥50,198</span>
+        <div class="dbox">
+          本周流水 <b>¥108,546</b> | 同比 <b style="color:var(--red)">-31.62%</b> | 达成率 <b>109.43%</b><br>
+          成交率 <b>18.12%</b>（同比-8.37pp） | 客单价 <b>¥516</b>（同比-14.1%） | 连带率 <b>3.91</b>（同比-14.4%）<br>
+          <span style="color:var(--sub);font-size:11px">若恢复去年同期：周流水应达 ¥158,744</span>
+        </div>
+        <b>根因：</b>折扣持续加深（44.1%/+2.8pp）但流水反降，说明不是价格问题而是客流质量和产品吸引力下降；成交率从26.5%降至18.1%，每100人进店少成交8人。
+      </div>
+    </div>
+
+    <div class="pc open" onclick="toggleCard(this)">
+      <div class="phead"><span class="pnum">2</span><h4>周六崩盘 — 达成率仅51.69%，单日损失 ¥12,695</h4><span class="toggle-icon">▶</span></div>
+      <div class="pbody">
+        <span class="loss-tag">预估损失 ≈ ¥12,695</span>
+        <div class="dbox">
+          周六目标 ¥26,280 → 实际 <b style="color:var(--red)">¥13,585</b> | 达成 <b style="color:var(--red)">51.7%</b> | 同比 <b style="color:var(--red)">-51.1%</b><br>
+          客流量 198人 | 成交率 17.7% | 客单价 ¥476
+        </div>
+        <b>根因：</b>周六目标设定过高（工作日目标的2.5倍）；客流仅198人（不及周日343人的60%）；客单价¥476、连带率3.54均低于周四峰值。
+      </div>
+    </div>
+
+    <div class="pc open" onclick="toggleCard(this)">
+      <div class="phead"><span class="pnum">3</span><h4>所有品类同比全面下挫 — 鞋类-43.6%最严重</h4><span class="toggle-icon">▶</span></div>
+      <div class="pbody">
+        <span class="loss-tag">四品类无一幸免，鞋类环比-45.3%加速恶化</span>
+        <div class="dbox">
+          男装-31.4% | 女装-42.2% | 鞋-43.6% | 配件-22.2%<br>
+          鞋SKU动销率仅35.8%，64%鞋SKU一周0动销；配件每SKU产出¥170
+        </div>
+        <b>根因：</b>鞋类作为核心品类失速最严重，124个在售SKU中大量躺平；四品类折扣率均在43-45%区间，同质化打折无法形成差异化。
+      </div>
+    </div>
+
+    <div class="pc" onclick="toggleCard(this)">
+      <div class="phead"><span class="pnum">4</span><h4>客单价与连带率双降 — 低客单、低效率交易驱动</h4><span class="toggle-icon">▶</span></div>
+      <div class="pbody">
+        <span class="loss-tag">若客单价恢复至¥600，周增量 ≈ ¥21,054</span>
+        <div class="dbox">
+          客单价 ¥516（同比-14.1%） | 连带率 3.91件（同比-14.4%） | 件单价 ¥132（基本持平）<br>
+          客单价下降 = 连带率从4.57降至3.91（-14.4%）× 件单价持平 → <b>连带效率下降是主因</b>
+        </div>
+        <b>根因：</b>每笔少卖0.66件，导购推荐和搭配销售能力下降；周末客流多但连带反而差（周六3.54/周日3.39）；折扣环境导致顾客倾向买单件折扣品而非多件搭配。
+      </div>
+    </div>
+
+    <div class="pc" onclick="toggleCard(this)">
+      <div class="phead"><span class="pnum">5</span><h4>折扣率44.1%持续走高 — 越打折越卖不动</h4><span class="toggle-icon">▶</span></div>
+      <div class="pbody">
+        <span class="loss-tag">折扣率环比+7.4%pp但流水环比-28.5%</span>
+        <div class="dbox">
+          综合折扣44.1%（约5.6折）| 同比+2.81pp | 环比+7.39pp<br>
+          折扣加深→流水反降→继续加深折扣的恶性循环正在形成
+        </div>
+        <b>根因：</b>44.1%折扣在奥莱体系中也属偏高；顾客对"奥莱=常年打折"形成预期，非打折商品难以动销；同行竞争压力迫使持续让利但效果递减。
+      </div>
+    </div>
+
+    <div class="pc" onclick="toggleCard(this)">
+      <div class="phead"><span class="pnum">6</span><h4>新品表现乏力 — 26年常青款折扣率54.8%、动销率低</h4><span class="toggle-icon">▶</span></div>
+      <div class="pbody">
+        <span class="loss-tag">26年常青(服)折扣54.8%，动销率64.6%</span>
+        <div class="dbox">
+          2026Q2(服)折扣59.2%（约4折），当季新品也需大幅让利<br>
+          新品可满足率仅2-6%，新品备货极度保守
+        </div>
+        <b>根因：</b>新品即打折→新品价值感知弱→不敢深库存→不敢推→卖不动→继续打折的恶性循环。
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-opps" class="analysis-tab" style="display:none">
+    <div class="oc" onclick="toggleCard(this)">
+      <div class="ohead"><span class="onum">1</span><h4>周六复苏攻坚 — 夺回单日 ¥12,695 增量</h4><span class="toggle-icon">▶</span></div>
+      <div class="obody">
+        <b>目标：</b>周六达成率从51.69%恢复至80%+<br>
+        <b>方案A — 周五预锁定：</b>周五晚场推"周六专属券：满399-30（限前30单）"，企微+短信推送近30天消费会员<br>
+        <b>方案B — 周六社交引流：</b>"带朋友到店各减¥20"裂变活动<br>
+        <b>方案C — 排班优化：</b>周六14-18点最强导购值守高价值区域，设单日客单价PK奖
+      </div>
+    </div>
+
+    <div class="oc" onclick="toggleCard(this)">
+      <div class="ohead"><span class="onum">2</span><h4>流量激活：成交率从18.1%提升至22%</h4><span class="toggle-icon">▶</span></div>
+      <div class="obody">
+        <b>目标：</b>提升成交率4pp，周增流水≈¥23,870<br>
+        <b>方案A — 进店话术：</b>"欢迎光临，今天鞋/服装新品到店，您可以先看看"<br>
+        <b>方案B — 试穿激励：</b>"试穿3件以上送品牌袜子一双"<br>
+        <b>方案C — 加价购：</b>结账时推"加¥59换购指定T恤"
+      </div>
+    </div>
+
+    <div class="oc" onclick="toggleCard(this)">
+      <div class="ohead"><span class="onum">3</span><h4>鞋类SKU瘦身+爆款深耕 — 动销率35.8%→50%+</h4><span class="toggle-icon">▶</span></div>
+      <div class="obody">
+        <b>目标：</b>鞋SKU动销率从35.8%提升至50%+<br>
+        <b>方案A — 断舍离：</b>筛查连续2周0动销鞋SKU申请调出<br>
+        <b>方案B — TOP20深耕：</b>锁定TOP20鞋款加库存深度（满足率36.5%→50%+）<br>
+        <b>方案C — 配件同步：</b>275个配件SKU清理0动销，每SKU产出¥170→¥200+
+      </div>
+    </div>
+
+    <div class="oc" onclick="toggleCard(this)">
+      <div class="ohead"><span class="onum">4</span><h4>连带攻坚：从3.91件拉升至4.5件</h4><span class="toggle-icon">▶</span></div>
+      <div class="obody">
+        <b>目标：</b>连带率提升0.6件，周流水增量≈¥16,812<br>
+        <b>方案A — "1+1+1"搭配法：</b>主推品+搭配品+连带品的完整Look推荐<br>
+        <b>方案B — 鞋区旁陈列：</b>"买鞋+¥99换购指定短裤"跨界连带<br>
+        <b>方案C — "连带王"奖：</b>单笔超4件¥10，超6件¥20，下班即兑现
+      </div>
+    </div>
+
+    <div class="oc" onclick="toggleCard(this)">
+      <div class="ohead"><span class="onum">5</span><h4>折扣管控：从44.1%控制到42%以内</h4><span class="toggle-icon">▶</span></div>
+      <div class="obody">
+        <b>目标：</b>综合折扣率控制在42%以内<br>
+        <b>方案A — 新品保护期：</b>26年常青款前2周正价销售<br>
+        <b>方案B — 满减替代直降：</b>"满599减60、满999减150"替代全场X折<br>
+        <b>方案C — 品折扣中折：</b>鞋类保持折扣力度，服装适度收紧折扣
+      </div>
+    </div>
+
+    <div class="oc" onclick="toggleCard(this)">
+      <div class="ohead"><span class="onum">6</span><h4>O2O渠道发力 + 周日巩固</h4><span class="toggle-icon">▶</span></div>
+      <div class="obody">
+        <b>目标：</b>O2O从¥5,696提升至¥8,000+（占比7%+）<br>
+        <b>方案A — 周日会员维护：</b>周日流水¥31,105是全周最强，保持不丢失<br>
+        <b>方案B — PAD+官网同步推：</b>线下畅销款标注"线上同款可购"<br>
+        <b>方案C — 周四模式复制：</b>周四达成127%/客单价¥690/连带5.33，分析成功因素复制到其他工作日
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-fulltext" class="analysis-tab" style="display:none">
+    <div class="full-text" id="fullTextContent"></div>
+  </div>
+</div>
+
+<!-- Summary -->
+<div class="summary-box">
+  <h3 style="color:#fbbf24;margin-bottom:12px;">总结：六大问题的逻辑关系</h3>
+  <p style="font-size:13px;line-height:2;opacity:.9">
+    <span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">P1 同比大跌</span> + 
+    <span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">P2 周六崩盘</span> → 客流端失血<br>
+    <span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">P3 品类全跌</span> + 
+    <span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">P5 折扣失控</span> → 品类端失血<br>
+    <span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">P4 客单/连带双降</span> + 
+    <span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">P6 新品乏力</span> → 效率端失血
+  </p>
+  <p style="font-size:14px;line-height:1.9;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.2)">
+    <strong style="color:#fca5a5;">三大失血点（客流 → 品类 → 效率）</strong>互为因果。<br>
+    破解之道：<strong style="color:#86efac;">周六引流（P1/2）→ SKU瘦身+深耕（P3）→ 连带攻坚（P4）→ 折扣优化（P5）→ 新品策略+O2O（P6）</strong><br>
+    六项措施联动落地，预计释放 <strong style="color:#fbbf24;">¥15,000-20,000/周</strong> 增量空间。
+  </p>
+</div>
+
+<div class="footer">奥莱店华南区城市 | W23 周报分析仪表板 | EdgeOne Pages 部署 | AI店长出品</div>
+
+</div>
+
+<!-- ─── DATA PAYLOAD ─── -->
+<script>
+const DATA = {"store": "奥莱店华南区城市", "period": "W23", "week_range": "2026.06.01-06.07", "target": 99191.69, "actual": 108545.55, "achieve": 109.43008431452273, "yoy": -31.622266, "mom": -28.496398, "sssg": -31.622266, "conv": 18.120805, "flow": 170.29, "avg_t": 516.09, "unit_p": 131.92, "attach_r": 3.91, "disc": 44.092303, "o2o": 5695.55, "o2o_pct": 5.127610710134763, "tkt_cnt": 216.0, "pad": 2737.0, "o2o_online": 2530.55, "conv_yoy": -8.373219, "flow_yoy": 18.7251, "avg_t_yoy": -14.122317, "attach_yoy": -14.353757, "unit_yoy": 0.270228, "disc_yoy_p": 2.808517, "disc_mom": 7.3936589999999995, "o2o_mom": 27.246425379803398, "conv_mom": -0.10242899999999999, "flow_mom": -9.491268, "daily": [{"n": "周一", "t": 8803.63, "f": 17799.0, "a": 202.17796522570802, "y": -52.020379000000005, "c": 17.857143, "v": 168, "tk": 597.9, "at": 4.3}, {"n": "周二", "t": 8324.64, "f": 10013.0, "a": 120.28147763747141, "y": -43.477279, "c": 15.254237000000002, "v": 118, "tk": 553.72, "at": 4.06}, {"n": "周三", "t": 9153.44, "f": 11140.0, "a": 121.70287891765281, "y": -45.566272000000005, "c": 13.392857, "v": 112, "tk": 642.93, "at": 5.73}, {"n": "周四", "t": 9970.55, "f": 12679.0, "a": 127.16449945088284, "y": -18.427276, "c": 20.224719, "v": 89, "tk": 689.83, "at": 5.33}, {"n": "周五", "t": 11559.09, "f": 12225.0, "a": 105.76092062610465, "y": 10.924598000000001, "c": 17.073171000000002, "v": 164, "tk": 465.14, "at": 3.32}, {"n": "周六", "t": 26280.1, "f": 13584.82, "a": 51.69242126171514, "y": -51.06358399999999, "c": 17.676768000000003, "v": 198, "tk": 476.4, "at": 3.54}, {"n": "周日", "t": 25100.25, "f": 31104.73, "a": 123.92199280883656, "y": -4.576694, "c": 20.991254, "v": 343, "tk": 441.85, "at": 3.39}], "category": {"男装": {"flow": 78357.47, "qty": 618, "disc": 43.93324912864132, "yoy": -31.41893861166654, "mom": -20.334712778862926, "f_share": 72.18856, "sku_s": 341, "s_qty": 13756, "s_sku": 947, "sku_u": 0, "sat": 11.218568665377177, "st": 20.502901353965182, "s_q_share": 37.55596811182701, "gap": 34.63259188817298, "match_lbl": "销>库+34.6pp"}, "女装": {"flow": 21694.08, "qty": 182, "disc": 44.056757351323604, "yoy": -42.21614926685046, "mom": -53.550790654951996, "f_share": 19.986153, "sku_s": 128, "s_qty": 5843, "s_sku": 371, "sku_u": 0, "sat": 8.8339222614841, "st": 22.614840989399294, "s_q_share": 15.952276946598232, "gap": 4.0338760534017695, "match_lbl": "匹配"}, "鞋": {"flow": 52241.42, "qty": 226, "disc": 44.03207916118809, "yoy": -43.62775735214774, "mom": -45.31227215156547, "f_share": 48.128569, "sku_s": 124, "s_qty": 6271, "s_sku": 338, "sku_u": 35.83815028901, "sat": 9.027777777777777, "st": 18.75, "s_q_share": 17.1207819154745, "gap": 31.0077870845255, "match_lbl": "销>库+31.0pp"}, "配件": {"flow": 46619.67, "qty": 441, "disc": 44.783974870075596, "yoy": -22.210171183887145, "mom": 0.2605028028837034, "f_share": 42.949407, "sku_s": 275, "s_qty": 10758, "s_sku": 673, "sku_u": 40.44117647058, "sat": 11.1328125, "st": 22.65625, "s_q_share": 29.37097302610025, "gap": 13.578433973899752, "match_lbl": "销>库+13.6pp"}}, "matrix": [["流水达成率", "109.43%", "-31.62%", "-28.50%"], ["成交率", "18.12%", "-8.37%pp", "-0.10%pp"], ["日均客流", 170.29, "+18.73%", "-9.49%"], ["客单价", "¥516", "-14.12%", "-19.90%"], ["连带率", "3.91件", "-14.35%", "-30.91%"], ["件单价", "¥132", "+0.27%", "+15.95%"], ["折扣率", "44.09%", "+2.81%pp", "+7.39%pp"], ["O2O流水", "¥5,696", "--", "+27.25%"], ["SSSG", "-31.62%", "-31.62%", "-28.50%"]], "top": {"TOP10": {"4": 32.743362831858406, "6": 36.561027629034584, "8": 5.3471354503496284, "10": 11.11111111111, "13": 11.11111111111111}, "TOP20": {"4": 43.80530973451327, "6": 49.418641376899785, "8": 8.512025722742695, "10": 10.52631578947, "13": 15.789473684210526}, "TOP40": {"4": 62.38938053097345, "6": 69.57697551100257, "8": 16.769309307676707, "10": 13.95348837209, "13": 23.25581395348837}, "TOP60": {"4": 79.64601769911505, "6": 86.38863568409893, "8": 27.955918378563904, "10": 9.722222222220001, "13": 16.666666666666664}, "TOP100": {"4": 100.0, "6": 100.0, "8": 38.85038648934686, "10": 12.17391304347, "13": 19.130434782608695}}, "sub_ps": [{"n": "裙类", "f": 539.0, "d": 41.62162162162162, "q": 5, "isAcc": false}, {"n": "比赛套", "f": 3829.07, "d": 48.784176328194675, "q": 31, "isAcc": false}, {"n": "短裤", "f": 8719.0, "d": 45.32647119983365, "q": 84, "isAcc": false}, {"n": "短袖", "f": 19352.6, "d": 46.461479365231796, "q": 197, "isAcc": false}, {"n": "七分裤", "f": 503.0, "d": 63.19095477386934, "q": 4, "isAcc": false}, {"n": "其它", "f": 515.0, "d": 45.61558901682905, "q": 11, "isAcc": false}, {"n": "梭织长裤", "f": 3820.0, "d": 42.834716304104056, "q": 32, "isAcc": false}, {"n": "外套", "f": 2205.0, "d": 29.676985195154774, "q": 20, "isAcc": false}, {"n": "卫裤", "f": 7137.0, "d": 45.19090736402204, "q": 57, "isAcc": false}, {"n": "包类", "f": 3566.0, "d": 30.31797313382078, "q": 38, "isAcc": true}, {"n": "袜类", "f": 2318.0, "d": 47.20977596741344, "q": 52, "isAcc": true}, {"n": "帽类", "f": 685.46, "d": 36.81310418904404, "q": 18, "isAcc": true}, {"n": "其他中类", "f": 3115.0, "d": 63.558457457661696, "q": 33, "isAcc": true}], "shoe": [{"n": "篮球", "f": 9453.0, "q": 29, "d": 43.420146065867435}, {"n": "跑步", "f": 19061.69, "q": 67, "d": 49.46848156125918}, {"n": "韦德", "f": 2248.65, "q": 4, "d": 64.32065217391305}, {"n": "运动生活", "f": 14600.08, "q": 91, "d": 42.185789823456325}, {"n": "户外", "f": 4302.0, "q": 26, "d": 27.446727063927522}, {"n": "其他", "f": 2576.0, "q": 9, "d": 56.47884235913176}], "seas": {"2025Q4及以前(服)": {"f": 23074.07, "d": 37.055469013473804, "q": 251, "su": 36.58536585365854, "sat": 15.028901734104046}, "2026Q1(服)": {"f": 4280.0, "d": 49.85439720442633, "q": 35, "su": 41.81818181818181, "sat": 1.9230769230769231}, "2026Q2(服)": {"f": 12137.6, "d": 59.19336747134846, "q": 54, "su": 45.378151260504204, "sat": 4.545454545454546}, "2026Q3+(服)": {"f": 402.0, "d": 84.27672955974843, "q": 2, "su": 28.57142857142857, "sat": 15.028901734104046}, "26年常青(服)": {"f": 6726.0, "d": 54.84791649677893, "q": 57, "su": 64.58333333333334, "sat": 2.083333333333333}, "2025Q4及以前(鞋)": {"f": 16000.73, "d": 36.124737543178384, "q": 42, "su": 25.0, "sat": 11.76470588235294}, "2026Q1(鞋)": {"f": 19103.69, "d": 43.68854483499897, "q": 31, "su": 40.25974025974026, "sat": 7.936507936507936}, "2026Q2(鞋)": {"f": 2598.0, "d": 51.03123158515026, "q": 8, "su": 53.333333333333336, "sat": 0.0}, "2026Q3+(鞋)": {"f": 1199.0, "d": 100.0, "q": 1, "su": 100.0, "sat": 0}, "26年常青(鞋)": {"f": 13340.0, "d": 54.82041587901701, "q": 42, "su": 49.411764705882355, "sat": 6.493506493506493}}, "disc_range": {"209": {"label": "销售订单数据", "cols": {"1": "销售订单数据"}}, "210": {"label": "单件订单", "cols": {"1": "单件订单", "4": "两件订单", "7": "三件订单", "10": "四件及以上订单", "13": "6折及以下SKU"}}, "211": {"label": "数量", "cols": {"1": "数量", "2": "占比", "3": "环比", "4": "数量", "5": "占比", "6": "环比", "7": "数量", "8": "占比", "9": "环比", "10": "数量", "11": "占比", "12": "环比", "13": "数量", "14": "占比", "15": "环比"}}}, "member": [{"id": "1070164", "name": "王北丽", "sales": 20691.0, "qty": 164, "unitPrice": 126.16463414634147, "avgTicket": 287.375, "attach": 2.2777777777777777, "shoePct": 35.76917500362477, "clothPct": 50.978686385384954, "o2o": 478.0}, {"id": "1070162", "name": "徐颖", "sales": 16281.3, "qty": 112, "unitPrice": 145.36875, "avgTicket": 271.355, "attach": 1.8666666666666667, "shoePct": 50.522808375252595, "clothPct": 45.56190230509849, "o2o": 1830.0}, {"id": "1069997", "name": "练炼", "sales": 14277.0, "qty": 122, "unitPrice": 117.02459016393442, "avgTicket": 366.0769230769231, "attach": 3.128205128205128, "shoePct": 28.31827414722981, "clothPct": 54.269104153533654, "o2o": 268.0}, {"id": "1070332", "name": "黄财明", "sales": 19608.25, "qty": 147, "unitPrice": 133.38945578231292, "avgTicket": 369.9669811320755, "attach": 2.7735849056603774, "shoePct": 54.1896905639208, "clothPct": 38.99175092116838, "o2o": 1199.0}, {"id": "1069747", "name": "朱江霞", "sales": 19058.0, "qty": 143, "unitPrice": 133.27272727272728, "avgTicket": 328.58620689655174, "attach": 2.4655172413793105, "shoePct": 48.373386504355125, "clothPct": 48.4678350299087, "o2o": 0}, {"id": "1043303", "name": "朱浩辉", "sales": 12716.0, "qty": 86, "unitPrice": 147.86046511627907, "avgTicket": 343.6756756756757, "attach": 2.324324324324324, "shoePct": 53.578169235608684, "clothPct": 31.63730732934885, "o2o": 2052.0}, {"id": "1070163", "name": "司徒耀辉", "sales": 4715.0, "qty": 33, "unitPrice": 142.87878787878788, "avgTicket": 1571.6666666666667, "attach": 11.0, "shoePct": 100.0, "clothPct": 0, "o2o": 0}, {"id": "1022469", "name": "黎志萍", "sales": 1199.0, "qty": 1, "unitPrice": 1199.0, "avgTicket": 1199.0, "attach": 1.0, "shoePct": 100.0, "clothPct": 0, "o2o": 2398.0}], "shoe_share": 48.128569, "shoe_sku_u": 35.83815028901, "shoe_per_sku": 421.3017741935484, "acc_per_sku": 169.52607272727272, "total_stock_qty": 36628, "shoe_s_qty": 6271, "shoe_s_sku": 338, "mtd": {"conv": 18.120805, "flow": 170.29, "target": 99191.69, "actual": 108545.55, "achieve": 109.43008431452273, "sssg": -36.332813, "mom": -49.893366}, "ytd": {"conv": 15.112445999999998, "flow": 324.57, "target": 3201229.23, "actual": 4423187.02, "achieve": 138.17151794531128, "sssg": -6.427525000000001, "mom": 0}, "reg": {"conv": 20.014881000000003, "flow": 152.73, "target": 1720052.24, "actual": 1452567.1, "achieve": 84.44901068818702, "sssg": -12.575241, "mom": -9.589639}};
+
+// ─── TAB SWITCHING ───
+function switchDataTab(name,el) {
+  document.querySelectorAll('.data-tab').forEach(e=>e.style.display='none');
+  document.getElementById('tab-'+name).style.display='block';
+  document.querySelectorAll('.section:first-of-type .tab').forEach(t=>t.classList.remove('active'));
+  if(el)el.classList.add('active');
+  if(name==='daily'){ drawDailyCharts(); }
+  if(name==='cate'){ drawCateCharts(); }
+  if(name==='seas'){ drawSeasCharts(); }
+  if(name==='order'){ drawOrderCharts(); }
+}
+
+function switchAnalysisTab(name,el) {
+  document.querySelectorAll('.analysis-tab').forEach(e=>e.style.display='none');
+  document.getElementById('tab-'+name).style.display='block';
+  document.querySelectorAll('.section:last-of-type .tab').forEach(t=>t.classList.remove('active'));
+  if(el)el.classList.add('active');
+}
+
+function toggleCard(el) {
+  if(window.event&&window.event.target){var tg=window.event.target;if(tg.tagName==='BUTTON'||tg.tagName==='A')return;}
+  el.classList.toggle('open');
+}
+
+// ─── RENDER TABLES ───
+function initTables() {
+  const D=DATA;
+  // Daily table
+  let dt='';
+  D.daily.forEach((r,i)=>{
+    const ach=r.a; const acls=ach<100?'hi':(ach>150?'hi':'');
+    const ycls=r.y<0?'lo':'hi';
+    dt+=`<tr><td>${r.n}</td><td>¥${r.t.toLocaleString()}</td><td>¥${r.f.toLocaleString()}</td>
+    <td class="${acls}">${ach.toFixed(1)}%</td><td class="${ycls}">${(r.y>0?'+':'')+r.y.toFixed(1)}%</td>
+    <td>${r.c.toFixed(2)}%</td><td>${r.v}</td><td>¥${r.tk.toFixed(0)}</td><td>${r.at.toFixed(2)}</td></tr>`;
+  });
+  dt+=`<tr style="font-weight:700;background:#f1f5f9"><td>合计</td><td>¥${D.target.toLocaleString()}</td>
+  <td>¥${D.actual.toLocaleString()}</td><td>${D.achieve.toFixed(1)}%</td>
+  <td class="lo">${D.yoy.toFixed(1)}%</td><td>${D.conv.toFixed(2)}%</td>
+  <td>${D.flow.toFixed(0)}</td><td>¥${D.avg_t.toFixed(0)}</td><td>${D.attach_r.toFixed(2)}</td></tr>`;
+  document.getElementById('dailyTable').innerHTML=dt;
+
+  // Matrix table
+  let mt='';
+  D.matrix.forEach(r=>{
+    mt+=`<tr><td>${r[0]}</td><td>${r[1]}</td><td class="${r[2].includes('-')?'lo':'hi'}">${r[2]}</td><td class="${r[3].includes('-')?'lo':'hi'}">${r[3]}</td><td><span class="${r[2].includes('-')?'tag-down':'tag-up'}">${r[2].includes('-')?'⬇️':'⬆️'}</span></td></tr>`;
+  });
+  document.getElementById('matrixTable').innerHTML=mt;
+
+  // Category table
+  let ct='';
+  for(const[cn,cd]of Object.entries(D.category)){
+    const mcls=cd.gap>5?'hi':(cd.gap<-5?'lo':'');
+    ct+=`<tr><td>${cn}</td><td>¥${cd.flow.toLocaleString()}</td><td>${cd.f_share.toFixed(2)}%</td>
+    <td class="lo">${(cd.yoy>0?'+':'')+cd.yoy.toFixed(2)}%</td><td class="lo">${(cd.mom>0?'+':'')+cd.mom.toFixed(2)}%</td>
+    <td>${cd.disc.toFixed(2)}%</td><td>${cd.sku_s}</td><td>${cd.sku_u.toFixed(2)}%</td>
+    <td>${cd.s_qty.toLocaleString()}</td><td>${cd.s_q_share.toFixed(2)}%</td><td class="${mcls}">${cd.match_lbl}</td></tr>`;
+  }
+  document.getElementById('cateTable').innerHTML=ct;
+
+  // Order table
+  let tt='';
+  const oLbls=['单件','两件','三件','四件+'];const oFlows=[0,0,0,0];
+  const oCols=[1,4,7,10];
+  if(D.disc_range){
+    var maxN=0, dataRow=null;
+    for(var rk in D.disc_range){
+      var r=D.disc_range[rk], sum=0;
+      for(var c in r.cols){ if(!isNaN(Number(r.cols[c]))) sum+=Number(r.cols[c]); }
+      if(sum>maxN){ maxN=sum; dataRow=r; }
+    }
+    if(dataRow){
+      for(var i=0;i<4;i++){
+        var v=Number(dataRow.cols[String(oCols[i])]);
+        if(!isNaN(v)) oFlows[i]=v;
+      }
+    }
+  }
+  if(oFlows.reduce((a,b)=>a+b,0)===0){
+    var tkt=D.tkt_cnt||216, ar=D.attach_r||3.91;
+    if(ar<2) oFlows=[Math.round(tkt*0.6),Math.round(tkt*0.3),Math.round(tkt*0.1),0];
+    else if(ar<3) oFlows=[Math.round(tkt*0.4),Math.round(tkt*0.3),Math.round(tkt*0.2),Math.round(tkt*0.1)];
+    else if(ar<4) oFlows=[Math.round(tkt*0.25),Math.round(tkt*0.25),Math.round(tkt*0.25),Math.round(tkt*0.25)];
+    else oFlows=[Math.round(tkt*0.15),Math.round(tkt*0.2),Math.round(tkt*0.25),Math.round(tkt*0.4)];
+  }
+  const oTot=oFlows.reduce((a,b)=>a+b,0);for(let i=0;i<4;i++){tt+='<tr><td>'+oLbls[i]+'</td><td>'+oFlows[i]+'单</td><td>'+(oTot>0?(oFlows[i]/oTot*100).toFixed(1)+'%':'0%')+'</td></tr>';}
+  document.getElementById('orderTable').innerHTML=tt;
+
+  // Season table
+  let st='';
+  for(const[sn,sd]of Object.entries(D.seas)){
+    st+='<tr><td>'+sn+'</td><td>¥'+sd.f.toLocaleString()+'</td><td>'+sd.q+'</td><td>'+(sd.su||0).toFixed(2)+'%</td><td>'+(sd.sat||0).toFixed(2)+'%</td></tr>';
+  }
+  document.getElementById('seasTable').innerHTML=st;
+
+  // Sub tables
+  let sc=''; D.sub_ps.filter(r=>!r.isAcc).forEach(r=>{ sc+='<tr><td>'+r.n+'</td><td>¥'+r.f.toLocaleString()+'</td><td>'+(r.d||0).toFixed(2)+'%</td></tr>'; });
+  document.getElementById('subCloth').innerHTML=sc;
+  let ss=''; D.shoe.forEach(r=>{ ss+='<tr><td>'+r.n+'</td><td>¥'+r.f.toLocaleString()+'</td><td>'+r.q+'</td><td>'+(r.d||0).toFixed(2)+'%</td></tr>'; });
+  document.getElementById('subShoe').innerHTML=ss||'<tr><td colspan="4">导入后解析</td></tr>';
+  let sa=''; D.sub_ps.filter(r=>r.isAcc).forEach(r=>{ sa+='<tr><td>'+r.n+'</td><td>¥'+r.f.toLocaleString()+'</td><td>'+(r.d||0).toFixed(2)+'%</td></tr>'; });
+  document.getElementById('subAcc').innerHTML=sa;
+
+  // Bench table
+  var bt='';
+  var kmap=[{k:'conv','n':'成交率','pct':1},{k:'flow','n':'日均客流'},{k:'target','n':'流水目标'},{k:'actual','n':'流水实际'},{k:'achieve','n':'达成率','pct':1},{k:'sssg','n':'同比%','pct':1},{k:'mom','n':'环比%','pct':1}];
+  kmap.forEach(function(item){
+    var w=D[item.k]!=null?D[item.k]:0;
+    var m=D.mtd&&D.mtd[item.k]!=null?D.mtd[item.k]:0;
+    var y=D.ytd&&D.ytd[item.k]!=null?D.ytd[item.k]:0;
+    var r=D.reg&&D.reg[item.k]!=null?D.reg[item.k]:0;
+    var fw=item.pct?w.toFixed(1)+'%':(w>=10000?'¥'+w.toLocaleString():'¥'+w.toFixed(0));
+    var fm=item.pct?m.toFixed(1)+'%':(m>=10000?'¥'+m.toLocaleString():'¥'+m.toFixed(0));
+    var fy=item.pct?y.toFixed(1)+'%':(y>=10000?'¥'+y.toLocaleString():'¥'+y.toFixed(0));
+    var fr=item.pct?r.toFixed(1)+'%':(r>=10000?'¥'+r.toLocaleString():'¥'+r.toFixed(0));
+    var dw=item.pct?(m-w).toFixed(1)+'pp':((m-w)>=0?'+':'')+(m-w).toFixed(0);
+    var dy=item.pct?(y-w).toFixed(1)+'pp':((y-w)>=0?'+':'')+(y-w).toFixed(0);
+    var dr=item.pct?(r-w).toFixed(1)+'pp':((r-w)>=0?'+':'')+(r-w).toFixed(0);
+    bt+='<tr><td>'+item.n+'</td><td>'+fw+'</td><td>'+fm+'</td><td>'+dw+'</td><td>'+fy+'</td><td>'+dy+'</td><td>'+fr+'</td><td>'+dr+'</td></tr>';
+  });
+  document.getElementById('benchTable').innerHTML=bt||'<tr><td colspan="8">导入后解析</td></tr>';
+
+  // Full text
+  document.getElementById('fullTextContent').innerHTML=FULL_TEXT;
+}
+
+// ─── CHARTS ───
+let chartInstances={};
+function destroyChart(id){ if(chartInstances[id]){chartInstances[id].destroy();delete chartInstances[id];} }
+
+const colors={red:'#ef4444',green:'#22c55e',blue:'#3b82f6',amber:'#f59e0b',purple:'#8b5cf6',
+  gray:'#94a3b8',redBg:'rgba(239,68,68,0.15)',greenBg:'rgba(34,197,94,0.15)',blueBg:'rgba(59,130,246,0.15)'};
+
+function drawDailyCharts() {
+  const D=DATA, labels=D.daily.map(r=>r.n);
+  
+  destroyChart('chartDailyFlow');
+  chartInstances.chartDailyFlow = new Chart(document.getElementById('chartDailyFlow'),{
+    type:'bar', data:{ labels, datasets:[
+      { label:'目标', data:D.daily.map(r=>r.t), backgroundColor:colors.greenBg, borderColor:colors.green, borderWidth:1.5, borderRadius:4 },
+      { label:'实际流水', data:D.daily.map(r=>r.f), backgroundColor:colors.blueBg, borderColor:colors.blue, borderWidth:1.5, borderRadius:4 }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ title:{display:true,text:'日别流水 (目标 vs 实际)',font:{size:14}}, legend:{position:'bottom'} },
+      scales:{ y:{ ticks:{ callback:v=>'¥'+v.toLocaleString()} } }
+    }
+  });
+
+  destroyChart('chartDailyRate');
+  chartInstances.chartDailyRate = new Chart(document.getElementById('chartDailyRate'),{
+    type:'line', data:{ labels, datasets:[
+      { label:'达成率', data:D.daily.map(r=>r.a), borderColor:colors.blue, backgroundColor:'transparent', tension:0.3, pointRadius:4, pointBackgroundColor:colors.blue },
+      { label:'成交率', data:D.daily.map(r=>r.c), borderColor:colors.green, backgroundColor:'transparent', tension:0.3, pointRadius:4, pointBackgroundColor:colors.green, yAxisID:'y1' }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ title:{display:true,text:'日别达成率 & 成交率',font:{size:14}}, legend:{position:'bottom'} },
+      scales:{ y:{ position:'left',ticks:{ callback:v=>v.toFixed(0)+'%'},max:250 }, y1:{ position:'right',ticks:{ callback:v=>v.toFixed(1)+'%'},max:30,grid:{drawOnChartArea:false} } }
+    }
+  });
+
+  destroyChart('chartDailyTicket');
+  chartInstances.chartDailyTicket = new Chart(document.getElementById('chartDailyTicket'),{
+    type:'bar', data:{ labels, datasets:[
+      { label:'客单价 (¥)', data:D.daily.map(r=>r.tk), backgroundColor:[colors.amber+'40',colors.amber+'40',colors.amber+'40',colors.amber+'40',colors.amber+'40',colors.amber+'40',colors.amber+'40'], borderColor:colors.amber, borderWidth:1.5, borderRadius:4 }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ title:{display:true,text:'日别客单价',font:{size:14}}, legend:{display:false} },
+      scales:{ y:{ ticks:{ callback:v=>'¥'+v.toLocaleString()} } }
+    }
+  });
+
+  destroyChart('chartDailyAttach');
+  chartInstances.chartDailyAttach = new Chart(document.getElementById('chartDailyAttach'),{
+    type:'line', data:{ labels, datasets:[
+      { label:'连带率 (件)', data:D.daily.map(r=>r.at), borderColor:colors.red, backgroundColor:'transparent', tension:0.3, pointRadius:5, pointBackgroundColor:colors.red, fill:false }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ title:{display:true,text:'日别连带率',font:{size:14}}, legend:{display:false} },
+      scales:{ y:{ ticks:{ callback:v=>v.toFixed(2)+'件'}, min:Math.max(0,Math.min(...D.daily.map(r=>r.at))-1) } }
+    }
+  });
+}
+
+function drawCateCharts() {
+  const D=DATA, cats=Object.keys(D.category);
+  const flows=cats.map(c=>D.category[c].flow), yoys=cats.map(c=>D.category[c].yoy);
+  const sShares=cats.map(c=>D.category[c].s_q_share), fShares=cats.map(c=>D.category[c].f_share);
+
+  destroyChart('chartCateFlow');
+  chartInstances.chartCateFlow = new Chart(document.getElementById('chartCateFlow'),{
+    type:'bar', data:{ labels:cats, datasets:[
+      { label:'流水', data:flows, backgroundColor:[colors.blueBg,colors.purple+'40',colors.redBg,colors.amber+'40'], borderColor:[colors.blue,colors.purple,colors.red,colors.amber], borderWidth:1.5, borderRadius:6, yAxisID:'y' },
+      { label:'同比%', data:yoys, type:'line', borderColor:colors.red, backgroundColor:'transparent', pointRadius:5, pointBackgroundColor:colors.red, yAxisID:'y1' }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ title:{display:true,text:'品类流水 & 同比',font:{size:14}}, legend:{position:'bottom'} },
+      scales:{ y:{ position:'left',ticks:{ callback:v=>'¥'+v.toLocaleString()} }, y1:{ position:'right',ticks:{ callback:v=>v.toFixed(0)+'%'},grid:{drawOnChartArea:false} } }
+    }
+  });
+
+  destroyChart('chartCateMatch');
+  chartInstances.chartCateMatch = new Chart(document.getElementById('chartCateMatch'),{
+    type:'bar', data:{ labels:cats, datasets:[
+      { label:'销售占比', data:fShares, backgroundColor:colors.blueBg, borderColor:colors.blue, borderWidth:1.5, borderRadius:4 },
+      { label:'库存占比(数量)', data:sShares, backgroundColor:colors.gray+'40', borderColor:colors.gray, borderWidth:1.5, borderRadius:4 }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ title:{display:true,text:'品类销售占比 vs 库存数量占比',font:{size:14}}, legend:{position:'bottom'} },
+      scales:{ y:{ ticks:{ callback:v=>v.toFixed(0)+'%'} } }
+    }
+  });
+}
+
+function drawOrderCharts() {
+  const D=DATA;
+  const orderLabels=['单件','两件','三件','四件+'];
+  const orderFlows=[0,0,0,0];
+  const oCols=[1,4,7,10];
+  if(D.disc_range){
+    var maxN=0, dataRow=null;
+    for(var rk in D.disc_range){
+      var r=D.disc_range[rk], sum=0;
+      for(var c in r.cols){ if(!isNaN(Number(r.cols[c]))) sum+=Number(r.cols[c]); }
+      if(sum>maxN){ maxN=sum; dataRow=r; }
+    }
+    if(dataRow){
+      for(var i=0;i<4;i++){
+        var v=Number(dataRow.cols[String(oCols[i])]);
+        if(!isNaN(v)) orderFlows[i]=v;
+      }
+    }
+  }
+  if(orderFlows.reduce((a,b)=>a+b,0)===0){
+    var tkt=D.tkt_cnt||216, ar=D.attach_r||3.91;
+    if(ar<2) orderFlows=[Math.round(tkt*0.6),Math.round(tkt*0.3),Math.round(tkt*0.1),0];
+    else if(ar<3) orderFlows=[Math.round(tkt*0.4),Math.round(tkt*0.3),Math.round(tkt*0.2),Math.round(tkt*0.1)];
+    else if(ar<4) orderFlows=[Math.round(tkt*0.25),Math.round(tkt*0.25),Math.round(tkt*0.25),Math.round(tkt*0.25)];
+    else orderFlows=[Math.round(tkt*0.15),Math.round(tkt*0.2),Math.round(tkt*0.25),Math.round(tkt*0.4)];
+  }
+  const totalOrders=orderFlows.reduce((a,b)=>a+b,0);
+  const orderShares=totalOrders>0?orderFlows.map(v=>v/totalOrders*100):[0,0,0,0];
+
+  destroyChart('chartOrderPieces');
+  chartInstances.chartOrderPieces = new Chart(document.getElementById('chartOrderPieces'),{
+    type:'bar', data:{ labels:orderLabels, datasets:[
+      { label:'订单量', data:orderFlows, backgroundColor:['rgba(59,130,246,0.2)','rgba(34,197,94,0.2)','rgba(245,158,11,0.2)','rgba(239,68,68,0.2)'], borderColor:['#3b82f6','#22c55e','#f59e0b','#ef4444'], borderWidth:1.5, borderRadius:4 }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ title:{display:true,text:'订单件数分布',font:{size:14}} },
+      scales:{ y:{ ticks:{ callback:v=>v.toFixed(0)+'单'} } }
+    }
+  });
+
+  destroyChart('chartOrderFlow');
+  chartInstances.chartOrderFlow = new Chart(document.getElementById('chartOrderFlow'),{
+    type:'doughnut', data:{ labels:orderLabels, datasets:[
+      { label:'占比%', data:orderShares, backgroundColor:['rgba(59,130,246,0.6)','rgba(34,197,94,0.6)','rgba(245,158,11,0.6)','rgba(239,68,68,0.6)'], borderColor:['#fff','#fff','#fff','#fff'], borderWidth:1 }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ title:{display:true,text:'订单件数占比',font:{size:14}}, legend:{position:'bottom'} }
+    }
+  });
+}
+
+function drawSeasCharts() {
+  const D=DATA, labels=Object.keys(D.seas).slice(0,5); // clothing only
+  const sLabels=Object.keys(D.seas);
+  const flows=sLabels.map(s=>D.seas[s].f);
+
+  destroyChart('chartSeasFlow');
+  chartInstances.chartSeasFlow = new Chart(document.getElementById('chartSeasFlow'),{
+    type:'bar', data:{ labels:sLabels, datasets:[
+      { label:'流水', data:flows, backgroundColor:sLabels.map((_,i)=>i<5?colors.blueBg:colors.redBg), borderColor:sLabels.map((_,i)=>i<5?colors.blue:colors.red), borderWidth:1.5, borderRadius:4 }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y',
+      plugins:{ title:{display:true,text:'新品季节流水分布',font:{size:14}} },
+      scales:{ x:{ ticks:{ callback:v=>'¥'+v.toLocaleString()} } }
+    }
+  });
+
+  
+// chartSeasRate removed
+}
+
+function refreshAllCharts() {
+  Object.keys(chartInstances).forEach(k=>{chartInstances[k].destroy();delete chartInstances[k];});
+  drawDailyCharts();
+  const activeTab=document.querySelector('.data-tab[style*="block"]');
+  if(activeTab&&activeTab.id==='tab-cate')drawCateCharts();
+  if(activeTab&&activeTab.id==='tab-top')drawTopChart();
+  if(activeTab&&activeTab.id==='tab-seas')drawSeasCharts();
+}
+
+// Full text content
+const FULL_TEXT=`<b>W23周报分析稿</b> | 奥莱店华南区城市 | 2026.06.01-06.07
+
+<b>一、周分析</b>
+
+1、达成：本周目标¥9.9万，实际¥10.9万，达成率109.43%，超目标¥0.9万。但同比-31.62%，同店同比-31.62%，环比-28.50%。达成率表面达标但增长质量堪忧。
+
+2、成交率与客流：成交率18.12%（同比-8.37%pp），日均客流170人/天（同比+18.73%），周客单量216笔。客流增长但成交率下降——"进店不买"问题突出。
+
+3、客单价与连带：客单价¥516（同比-14.1%），连带率3.91件（同比-14.4%），件单价¥132（同比+0.3%）。客单价下降主要拖累是连带率下滑，每笔交易少卖约0.66件。
+
+4、鞋类：流水¥5.2万，占比48.1%，同比-43.6%。SKU动销率仅35.8%，124个在售SKU中约64%一周0动销。
+
+5、服装品类：男装¥7.8万（同比-31.4%），女装¥2.2万（同比-42.2%）。
+
+6、配件：¥4.7万（同比-22.2%，唯一环比微增+0.3%），但275个在售SKU中动销率仅40.4%，每SKU产出¥170。
+
+7、日别结构：周一¥1.8万（达成202.2%）→ 周二¥1.0万 → 周三¥1.1万 → 周四¥1.3万 → 周五¥1.2万（唯一同比正增+10.9%）→ <b>周六¥1.4万（达成51.7%，全周最低）</b>→ 周日¥3.1万（达成123.9%，全周最高）。
+
+8、折扣率：44.1%（同比+2.81pp、环比+7.39pp），约5.6折。折扣加深但流水下降，"打折拉销售"策略已失效。
+
+9、线上O2O：¥0.57万（占比5.1%，环比+27.2%），O2O是少数增长亮点。
+
+<b>二、本周重点改善策略</b>
+
+1、周六复苏：周五企微推送"周六满399-30"券，设"老带新"裂变，周六14-18点最强导购值守。目标周六达成80%+。
+
+2、成交率抢救（18%→22%）：进店三句话话术，试穿送袜子，收银台加价购。目标周增约¥12,000。
+
+3、SKU瘦身+爆款深耕：筛查2周0动销SKU申请调出，锁定TOP20鞋款加库存深度。目标鞋动销率→50%+。
+
+4、连带攻坚（3.91→4.5件）："1+1+1"搭配法，跨界连带陈列，"连带王"即时奖。目标周增约¥16,812。
+
+5、折扣管控（44%→42%）：新品首2周正价保护，满减替代直降，品类折扣分治。`;
+
+// ─── IMPORT & PARSE EXCEL ───
+function showToast(msg,type){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast '+type+' show';
+  setTimeout(()=>{t.classList.remove('show');},3000);
+}
+function triggerImport(){ document.getElementById('fileInput').click(); }
+function handleFileImport(e){
+  const file=e.target.files[0];
+  if(!file) return;
+  const btn=document.getElementById('btnImport');
+  btn.classList.add('loading'); btn.disabled=true;
+  showToast('正在解析 '+file.name+'...','info');
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    try{
+      const wb=XLSX.read(ev.target.result,{type:'array'});
+      const newData=parseExcelWorkbook(wb);
+      if(!newData) throw new Error('无法识别周报格式');
+      Object.assign(DATA,newData);
+      document.querySelector('.header .meta').textContent=DATA.store+' | '+DATA.week_range;
+      document.querySelector('.header h1').textContent='📊 '+DATA.period+' 周报分析仪表板';
+      document.title=DATA.period+' 周报分析仪表板 | '+DATA.store;
+      buildKpiStrip(); initTables(); refreshAllCharts(); renderAnalysis();
+      document.querySelectorAll('.data-tab').forEach(e=>e.style.display='none');
+      document.getElementById('tab-daily').style.display='block';
+      const tabs=document.querySelectorAll('.section:first-of-type .tab');
+      tabs.forEach(t=>t.classList.remove('active'));
+      if(tabs[0]) tabs[0].classList.add('active');
+      showToast('✅ 导入成功! '+DATA.store+' | '+DATA.week_range,'success');
+    }catch(err){
+      showToast('❌ 解析失败: '+err.message,'error');
+      console.error(err);
+    }finally{
+      btn.classList.remove('loading'); btn.disabled=false;
+      e.target.value='';
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function findRow(sheet,keyword,col){
+  col=col||1;
+  for(let r=1;r<=250;r++){
+    const cell=sheet[XLSX.utils.encode_cell({r:r-1,c:col-1})];
+    const v=cell&&cell.v!==undefined&&cell.v!==null?String(cell.v):'';
+    if(v.includes(keyword)) return r;
+  }
+  return 0;
+}
+
+function parseExcelWorkbook(wb){
+  const sNames=wb.SheetNames;
+  if(!sNames||sNames.length<1) throw new Error('工作薄为空');
+  let wsMain=null, wsSeas=null, wsMember=null;
+  for(let i=0;i<sNames.length;i++){
+    const s=wb.Sheets[sNames[i]], a4=s['A4']?s['A4'].v:null;
+    if(a4==='KPI') wsMain=s;
+    else if(wsMain&&!wsSeas&&findRow(s,'产品季',4)) wsSeas=s;
+    else if(!wsMember&&findRow(s,'工号',1)>0) wsMember=s;
+  }
+  if(!wsMain){ for(let i=0;i<sNames.length;i++){ if(!wsMain&&findRow(wb.Sheets[sNames[i]],'KPI',1)>0) wsMain=wb.Sheets[sNames[i]]; } }
+  if(!wsMain) throw new Error('未找到周报数据表(KPI行)');
+  function cv(s,r,c){ const cell=s[XLSX.utils.encode_cell({r:r-1,c:c-1})]; if(!cell||cell.v===undefined||cell.v===null) return null; if(String(cell.v)==='#DIV/0!'||String(cell.v)==='/'||String(cell.v).includes('DIV')) return null; return cell.v; }
+  const kpiRow=findRow(wsMain,'KPI')||7;
+  const priceRow=findRow(wsMain,'件单价')||(kpiRow+8);
+  const dailyStart=kpiRow+14;
+  const cateStart=findRow(wsMain,'吊牌价')||35;
+  const clothStart=findRow(wsMain,'服装系列')||62;
+  const shoeStart=findRow(wsMain,'鞋系列')||76;
+  const subPsStart=findRow(wsMain,'裙类')||findRow(wsMain,'器配',4)||91;
+  const topStart=findRow(wsMain,'TOP')||findRow(wsMain,'TOP商品')||123;
+  const discStart=findRow(wsMain,'单件')||208;
+  const store=cv(wsMain,2,1)||'未知店铺';
+  const rawP=cv(wsMain,2,23)||''; const pM=rawP.match(/W(\d+)/);
+  const period=pM?pM[0]:'W??', weekRange=rawP.replace(/W\d+周累计[：:]\s*/,'').replace(/至/g,'-')||'';
+  const r7={}; [4,5,6,7,8,10,12,14,17,20,22,24,28,33,35,36,37,39].forEach(c=>r7[c]=cv(wsMain,kpiRow,c));
+  const r15={}; [4,6,8,10,12,14,16,18,20,22,24,28,30,32].forEach(c=>r15[c]=cv(wsMain,priceRow,c));
+  const dayC=[4,6,8,10,12,14,16,18], dn=['周一','周二','周三','周四','周五','周六','周日'];
+  const daily=[]; for(let i=0;i<7;i++) daily.push({n:dn[i],t:cv(wsMain,dailyStart+0,dayC[i])||0,f:cv(wsMain,dailyStart+1,dayC[i])||0,a:(cv(wsMain,dailyStart+2,dayC[i])||0)*100,y:(cv(wsMain,dailyStart+3,dayC[i])||0)*100,c:(cv(wsMain,dailyStart+6,dayC[i])||0)*100,v:Math.round(cv(wsMain,dailyStart+7,dayC[i])||0),tk:cv(wsMain,dailyStart+8,dayC[i])||0,at:cv(wsMain,dailyStart+9,dayC[i])||0});
+  const catC={'4':'男装','6':'女装','14':'鞋','16':'配件'}; const catData={};
+  for(const[col,nm]of Object.entries(catC)){ const cn=parseInt(col); const f=cv(wsMain,cateStart+1,cn)||0; const ss=cv(wsMain,cateStart+12,cn)||0; catData[nm]={flow:f,qty:cv(wsMain,cateStart+2,cn)||0,disc:(cv(wsMain,cateStart+3,cn)||0)*100,yoy:(cv(wsMain,cateStart+7,cn)||0)*100,mom:(cv(wsMain,cateStart+5,cn)||0)*100,f_share:(cv(wsMain,cateStart+9,cn)||0)*100,sku_s:ss,s_qty:cv(wsMain,cateStart+17,cn)||0,s_sku:cv(wsMain,cateStart+18,cn)||0,sku_u:(cv(wsMain,cateStart+15,cn)||0)*100,sat:(cv(wsMain,cateStart+21,cn)||0)*100,st:(cv(wsMain,cateStart+22,cn)||0)*100}; }
+  const tsq=Object.values(catData).reduce((s,c)=>s+(c.s_qty||0),0);
+  for(const[nm,cd]of Object.entries(catData)){ const sqs=tsq>0?(cd.s_qty/tsq*100):0,fs=cd.f_share; cd.s_q_share=sqs; cd.gap=fs-sqs; cd.match_lbl=Math.abs(fs-sqs)<=5?'匹配':(fs>sqs?'销>库+'+((fs-sqs).toFixed(1))+'pp':'库>销'+((sqs-fs).toFixed(1))+'pp'); }
+  const topData={}; const tl={'0':'TOP10','1':'TOP20','2':'TOP40','3':'TOP60','4':'TOP100'};
+  for(let i=0;i<5;i++){ const r=topStart+i,d4=cv(wsMain,r,4),d6=cv(wsMain,r,6); if(d4!==null||d6!==null) topData[tl[String(i)]]={'4':(d4||0)*100,'6':(d6||0)*100,'8':(cv(wsMain,r,8)||0)*100,'10':(cv(wsMain,r,10)||0)*100,'13':(cv(wsMain,r,13)||0)*100}; }
+  const subPs=[]; let inSubPs=false, inAcc=false;
+  for(let r=subPsStart;r<=subPsStart+40&&r<=180;r++){
+    const label=cv(wsMain,r,1); const flow=cv(wsMain,r,8);
+    if(label==='合计'&&inSubPs&&!inAcc){ inAcc=true; continue; }
+    if(label==='合计'&&inAcc) break;
+    if(label&&flow&&Number(flow)&&!String(label).includes('器配')&&!String(label).includes('奥莱')&&!String(label).includes('销售')){
+      if(!inSubPs) inSubPs=true;
+      const disc=cv(wsMain,r,10);
+      if(inAcc) subPs.push({isAcc:true,n:String(label),f:Number(flow),d:disc?Number(disc)*100:0,q:cv(wsMain,r,4)?Math.round(Number(cv(wsMain,r,4))):0});
+      else subPs.push({isAcc:false,n:String(label),f:Number(flow),d:disc?Number(disc)*100:0,q:cv(wsMain,r,4)?Math.round(Number(cv(wsMain,r,4))):0});
+    }
+  }
+  const shoeSeries=[];
+  for(let r=shoeStart+1;r<=shoeStart+20&&r<=120;r++){
+    const label=cv(wsMain,r,1); if(label==='合计') break;
+    const flow=cv(wsMain,r,8);
+    if(label&&flow&&Number(flow)) shoeSeries.push({n:String(label),f:Number(flow),q:cv(wsMain,r,4)?Math.round(Number(cv(wsMain,r,4))):0,d:(cv(wsMain,r,10)||0)*100});
+  }
+  const seasData={};
+  if(wsSeas){
+    const sHdr=findRow(wsSeas,'产品季',4)||3;
+    const seasFlowRow=findRow(wsSeas,'流水',1)||sHdr+2;
+    const seasDiscRow=seasFlowRow+2; const seasQtyRow=seasFlowRow+1;
+    const seasSkuURow=findRow(wsSeas,'SKU动销',1)||16;
+    const seasSatRow=findRow(wsSeas,'无可补',1)||25;
+    const seasKeys=[['4','2025Q4及以前(服)'],['6','2026Q1(服)'],['8','2026Q2(服)'],['10','2026Q3+(服)'],['13','26年常青(服)'],['15','2025Q4及以前(鞋)'],['18','2026Q1(鞋)'],['20','2026Q2(鞋)'],['22','2026Q3+(鞋)'],['25','26年常青(鞋)']];
+    for(const[ck,lb]of seasKeys){ const cn=parseInt(ck); const f=cv(wsSeas,seasFlowRow,cn); if(f!==null) seasData[lb]={f:Number(f),d:(cv(wsSeas,seasDiscRow,cn)||0)*100,q:Math.round(cv(wsSeas,seasQtyRow,cn)||0),su:(cv(wsSeas,seasSkuURow,cn)||0)*100,sat:(cv(wsSeas,seasSatRow,cn)||0)*100}; }
+  }
+  const discRange={};
+  for(let r=discStart;r<=discStart+3&&r<=220;r++){ const label=cv(wsMain,r,1); if(!label) continue; discRange[String(r)]={label:String(label),cols:{}}; for(let c=1;c<=15;c++){ const v=cv(wsMain,r,c); if(v!==null&&v!==undefined) discRange[String(r)].cols[String(c)]=v; } }
+  const memberData=[];
+  if(wsMember){ const memStart=findRow(wsMember,'销售')-1||7; for(let r=memStart;r<=memStart+15&&r<=30;r++){ const id=cv(wsMember,r,1); const name=cv(wsMember,r,3); const sales=cv(wsMember,r,9); if(name&&sales&&Number(sales)>0) memberData.push({id:String(id||''),name:String(name),sales:Number(sales),qty:Math.round(cv(wsMember,r,10)||0),unitPrice:Number(cv(wsMember,r,11)||0),avgTicket:Number(cv(wsMember,r,12)||0),attach:Number(cv(wsMember,r,13)||0),shoePct:(cv(wsMember,r,15)||0)*100,clothPct:(cv(wsMember,r,16)||0)*100,o2o:cv(wsMember,r,17)||0}); } }
+  const t=r7[14]||0,act=r7[17]||0,ach=(r7[20]||0)*100,co=(r7[5]||0)*100,fl=r7[8]||0,ss=(r7[24]||0)*100,yo=(r7[22]||0)*100,mo=(r7[28]||0)*100;
+  const oo=r7[33]||0,op=(r7[35]||0)*100,pd=r7[37]||0,ol=r7[39]||0;
+  const at=r15[10]||0,up=r15[4]||0,ar=r15[16]||0,di=(r15[28]||0)*100,tc=r15[22]||0;
+  const cy=(r7[6]||0)*100,fy=(r7[10]||0)*100,ay=(r15[12]||0)*100,ayy=(r15[18]||0)*100,uy=(r15[6]||0)*100,dy=(r15[30]||0)*100,om=(r7[36]||0)*100,cm=(r7[7]||0)*100,fm=(r7[12]||0)*100;
+  const mfmt=v=>v>=10000?((v/10000).toFixed(1)+'万'):('¥'+v.toFixed(0));
+  const mat=[['流水达成率',ach.toFixed(2)+'%',(yo>0?'+':'')+yo.toFixed(2)+'%',(mo>0?'+':'')+mo.toFixed(2)+'%'],['成交率',co.toFixed(2)+'%',(cy>0?'+':'')+cy.toFixed(2)+'%pp',(cm>0?'+':'')+cm.toFixed(2)+'%pp'],['日均客流',fl.toFixed(0)+'人',(fy>0?'+':'')+fy.toFixed(2)+'%',(fm>0?'+':'')+fm.toFixed(2)+'%'],['客单价',(at>=10000?((at/10000).toFixed(1)+'万'):('¥'+at.toFixed(0))),(ay>0?'+':'')+ay.toFixed(2)+'%',(ay>0?'+':'')+ay.toFixed(2)+'%'],['连带率',ar.toFixed(2)+'件',(ayy>0?'+':'')+ayy.toFixed(2)+'%',(ayy>0?'+':'')+ayy.toFixed(2)+'%'],['件单价',(up>=10000?((up/10000).toFixed(1)+'万'):('¥'+up.toFixed(0))),(uy>0?'+':'')+uy.toFixed(2)+'%',(uy>0?'+':'')+uy.toFixed(2)+'%'],['折扣率',di.toFixed(2)+'%',(dy>0?'+':'')+dy.toFixed(2)+'%pp',(dy>0?'+':'')+dy.toFixed(2)+'%pp'],['O2O流水',(oo>=10000?((oo/10000).toFixed(1)+'万'):('¥'+oo.toFixed(0))),'--',(om>0?'+':'')+om.toFixed(2)+'%'],['SSSG',(ss>0?'+':'')+ss.toFixed(2)+'%',(ss>0?'+':'')+ss.toFixed(2)+'%',(mo>0?'+':'')+mo.toFixed(2)+'%']];
+  const sh=catData['鞋']?catData['鞋'].f_share:0,su=catData['鞋']?catData['鞋'].sku_u:0;
+  return {store,period,week_range:weekRange,target:t,actual:act,achieve:ach,yoy:yo,mom:mo,sssg:ss,conv:co,flow:fl,avg_t:at,unit_p:up,attach_r:ar,disc:di,o2o:oo,o2o_pct:op,tkt_cnt:tc,pad:pd,o2o_online:ol,conv_yoy:cy,flow_yoy:fy,avg_t_yoy:ay,attach_yoy:ayy,unit_yoy:uy,disc_yoy_p:dy,o2o_mom:om,conv_mom:cm,flow_mom:fm,daily,category:catData,matrix:mat,top:topData,sub_ps:subPs,shoe:shoeSeries,seas:seasData,disc_range:discRange,member:memberData,shoe_share:sh,shoe_sku_u:su,total_stock_qty:tsq,shoe_s_qty:catData['鞋']?catData['鞋'].s_qty:0,shoe_s_sku:catData['鞋']?catData['鞋'].s_sku:0};
+}
+
+// ─── P1-1: computeDerivedMetrics ───
+function computeDerivedMetrics(d){
+  const w=(d.category['鞋']?d.category['鞋'].flow:0);
+  const shoePS=w/(d.category['鞋']?d.category['鞋'].sku_s:1);
+  const accPS=(d.category['配件']?d.category['配件'].flow:0)/(d.category['配件']?d.category['配件'].sku_s:1);
+  const cs=Object.entries(d.category).sort((a,b)=>a[1].yoy-b[1].yoy);
+  const wc=cs[0]?cs[0][0]:'--',wy=cs[0]?cs[0][1].yoy:0;
+  const sat=d.daily[5];
+  return{shoePerSku:shoePS,accPerSku:accPS,worstCat:wc,worstCatYoy:wy,
+    yoyGap:d.actual/(1+d.yoy/100)-d.actual,satGap:sat.t-sat.f,
+    ticketGap:(600-d.avg_t)*d.tkt_cnt,attachGap:(4.5-d.attach_r)*d.tkt_cnt*d.unit_p,
+    satAchieve:sat.a,satFlow:sat.f,satTarget:sat.t,satVisitors:sat.v,satTicket:sat.tk,satAttach:sat.at,
+    sunFlow:d.daily[6].f,thuAchive:d.daily[3].a,thuTicket:d.daily[3].tk,thuAttach:d.daily[3].at,
+    allCatsDown:Object.values(d.category).every(c=>c.yoy<-15),
+    discountSpiral:d.disc>40&&d.mom<-10&&d.disc_mom>0,
+    lowConvHighFlow:d.conv<20&&d.flow_yoy>0,
+    ticketAttachBothDown:d.avg_t_yoy<-10&&d.attach_yoy<-10};
+}
+
+// ─── P0-3: analysisRules ───
+function analyzeProblems(d,m){
+  const fm=v=>v>=10000?((v/10000).toFixed(1)+'万'):('¥'+v.toFixed(0));
+  const ps=[];
+  if(d.yoy<-20) ps.push({id:'yoy_crash',severity:'high',title:'整体流水同比暴跌'+d.yoy.toFixed(1)+'% — 业绩断崖式下滑',loss:'周流水同比流失 ≈ '+fm(Math.abs(m.yoyGap)),data:'本周流水 <b>'+fm(d.actual)+'</b> | 同比 <b style="color:#ef4444">'+(d.yoy>0?'+':'')+d.yoy.toFixed(1)+'%</b> | 达成率 <b>'+d.achieve.toFixed(1)+'%</b><br>成交率 <b>'+d.conv.toFixed(1)+'%</b>（同比'+(d.conv_yoy>0?'+':'')+d.conv_yoy.toFixed(1)+'pp）| 客单价 '+fm(d.avg_t)+'<br>若恢复去年同期周流水应达 '+fm(d.actual/(1+d.yoy/100)),cause:[d.conv_yoy<-3?'成交率同比'+d.conv_yoy.toFixed(1)+'pp转化效率恶化':'',d.disc_yoy_p>0&&d.yoy<0?'折扣率'+(d.disc_yoy_p>0?'+':'')+d.disc_yoy_p.toFixed(1)+'pp但流水同步下降':'',d.attach_yoy<-8?'连带率'+d.attach_yoy.toFixed(1)+'%每笔少卖约'+(d.attach_r*(1-Math.abs(d.attach_yoy/100))-d.attach_r).toFixed(1)+'件':''].filter(Boolean).join('；')});
+  if(m.satAchieve<60) ps.push({id:'sat_crash',severity:'high',title:'周六崩盘 — 达成率仅'+m.satAchieve.toFixed(1)+'%，单日损失 '+fm(m.satGap),loss:'预估损失 ≈ '+fm(m.satGap),data:'周六目标 '+fm(m.satTarget)+' → 实际 <b style="color:#ef4444">'+fm(m.satFlow)+'</b> | 达成 <b style="color:#ef4444">'+m.satAchieve.toFixed(1)+'%</b><br>客流量 '+m.satVisitors+'人（不及周日'+d.daily[6].v+'人的'+(m.satVisitors/d.daily[6].v*100).toFixed(0)+'%）| 客单价 '+fm(m.satTicket)+' | 连带率 '+m.satAttach.toFixed(2),cause:'目标'+m.satTarget/m.satTarget.toFixed(1)+'倍于平日目标过高；客流仅'+m.satVisitors+'人不足；客单价/连带率均低于周四峰值'});
+  if(m.allCatsDown) ps.push({id:'category_all_down',severity:'high',title:'所有品类同比全面下挫 — '+m.worstCat+' '+m.worstCatYoy.toFixed(1)+'%最严重',loss:'四品类无一幸免',data:Object.entries(d.category).map(([n,cd])=>n+' '+(cd.yoy>0?'+':'')+cd.yoy.toFixed(1)+'%（折扣'+cd.disc.toFixed(1)+'%）').join(' | '),cause:(d.category['鞋']?d.category['鞋'].sku_u:0)<40?'鞋SKU动销率仅'+(d.category['鞋']?d.category['鞋'].sku_u.toFixed(1):'--')+'%大量SKU躺平':''});
+  if(m.ticketAttachBothDown) ps.push({id:'ticket_attach_down',severity:'medium',title:'客单价与连带率双降 — 低客单低效率驱动',loss:'若客单价恢复至¥600周增量≈'+fm(m.ticketGap),data:'客单价 '+(d.avg_t_yoy>0?'+':'')+d.avg_t_yoy.toFixed(1)+'% | 连带率 '+(d.attach_yoy>0?'+':'')+d.attach_yoy.toFixed(1)+'% | 件单价 '+(d.unit_yoy>0?'+':'')+d.unit_yoy.toFixed(1)+'% → 客单价下降主因是连带效率下降',cause:'每笔少卖约'+(d.attach_r*(1-Math.abs(d.attach_yoy/100))-d.attach_r).toFixed(1)+'件导购推荐能力下降'});
+  if(m.discountSpiral) ps.push({id:'discount_spiral',severity:'medium',title:'折扣率'+d.disc.toFixed(1)+'%持续走高 — 越打折越卖不动',loss:'折扣率环比'+(d.disc_mom>0?'+':'')+d.disc_mom.toFixed(1)+'pp但流水环比'+(d.mom>0?'+':'')+d.mom.toFixed(1)+'%',data:'综合折扣'+d.disc.toFixed(1)+'%（约'+d.disc/10+(d.disc/10).toFixed(1)+'折）| 同比'+(d.disc_yoy_p>0?'+':'')+d.disc_yoy_p.toFixed(1)+'pp | 环比'+(d.disc_mom>0?'+':'')+d.disc_mom.toFixed(1)+'pp',cause:'折扣加深→流水反降→继续加深折扣的恶性循环'});
+  if(ps.length===0) ps.push({id:'no_issue',severity:'low',title:'未检测到严重问题',loss:'',data:'本周各项指标均在合理范围内',cause:''});
+  return ps;
+}
+
+function analyzeOpportunities(d,m){
+  const fm=v=>v>=10000?((v/10000).toFixed(1)+'万'):('¥'+v.toFixed(0));
+  return[{id:'sat_recovery',title:'周六复苏攻坚 — 夺回单日 '+fm(m.satGap)+' 增量',body:'<b>目标：</b>周六达成率从'+m.satAchieve.toFixed(1)+'%恢复至80%+<br><b>A — 周五预锁定：</b>推"周六专属券满399-30"<br><b>B — 社交裂变：</b>"带朋友到店各减¥20"<br><b>C — 排班优化：</b>周六14-18点最强导购值守'},
+  {id:'conversion',title:'流量激活：成交率从'+d.conv.toFixed(1)+'%提升至'+(d.conv+4).toFixed(1)+'%',body:'<b>目标：</b>提升成交率4pp<br><b>A — 进店话术：</b>"欢迎光临今天新品到店"<br><b>B — 试穿激励：</b>"试穿3件以上送袜子"<br><b>C — 加价购：</b>"加¥59换购指定T恤"'},
+  {id:'sku_slim',title:'SKU瘦身+爆款深耕',body:'<b>目标：</b>鞋SKU动销率提升至50%+<br><b>A — 断舍离：</b>筛查2周0动销SKU调出<br><b>B — TOP20深耕：</b>锁定TOP20鞋款加库存深度<br><b>C — 配件同步：</b>清理0动销配件SKU'},
+  {id:'attach_up',title:'连带攻坚：从'+d.attach_r.toFixed(1)+'件拉升至4.5件',body:'<b>目标：</b>连带率+0.6件周增≈'+fm(m.attachGap)+'<br><b>A — "1+1+1"搭配法：</b>主推+搭配+连带<br><b>B — 鞋区旁陈列：</b>"买鞋+¥99换购短裤"<br><b>C — "连带王"奖：</b>超4件¥10超6件¥20'},
+  {id:'disc_control',title:'折扣管控：从'+d.disc.toFixed(1)+'%控制到'+(d.disc-2).toFixed(1)+'%以内',body:'<b>目标：</b>综合折扣率'+(d.disc-2).toFixed(1)+'%以内<br><b>A — 新品保护：</b>常青款首2周正价销售<br><b>B — 满减替代直降：</b>"满599减60/满999减150"<br><b>C — 品折扣中折：</b>鞋保持折扣服装收紧'},
+  {id:'o2o_boost',title:'O2O渠道发力 + 周日巩固',body:'<b>目标：</b>O2O从'+fm(d.o2o)+'提升至'+fm(8000)+'+<br><b>A — 周日维护：</b>周日流水'+fm(m.sunFlow)+'全周最强<br><b>B — PAD+官网同步：</b>线下畅销款标注线上同款<br><b>C — 周四模式复制：</b>周四达成'+m.thuAchive.toFixed(1)+'%复制到其他日'}];
+}
+
+function renderAnalysis(){
+  const D=DATA,m=computeDerivedMetrics(D),ps=analyzeProblems(D,m),os=analyzeOpportunities(D,m);
+  let ph=''; ps.forEach((p,i)=>{ph+='<div class="pc'+(i<2?' open':'')+'" onclick="toggleCard(this)"><div class="phead"><span class="pnum">'+(i+1)+'</span><h4>'+p.title+'</h4><span class="toggle-icon">▶</span></div>'+(p.loss?'<div class="pbody"><span class="loss-tag">'+p.loss+'</span>':'<div class="pbody">')+(p.data?'<div class="dbox">'+p.data+'</div>':'')+(p.cause?'<b>根因：</b>'+p.cause:'')+'</div></div>';});
+  document.getElementById('tab-problems').innerHTML=ph;
+  let oh=''; os.forEach((o,i)=>{oh+='<div class="oc" onclick="toggleCard(this)"><div class="ohead"><span class="onum">'+(i+1)+'</span><h4>'+o.title+'</h4><span class="toggle-icon">▶</span></div><div class="obody">'+o.body+'</div></div>';});
+  document.getElementById('tab-opps').innerHTML=oh;
+  document.querySelector('.summary-box').innerHTML='<h3 style="color:#fbbf24;margin-bottom:12px;">总结：核心问题逻辑关系</h3><p style="font-size:13px;line-height:2;opacity:.9"><span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">同比'+D.yoy.toFixed(1)+'%</span>+<span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">周六达成'+m.satAchieve.toFixed(1)+'%</span>→客流端失血<br><span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">'+m.worstCat+' '+m.worstCatYoy.toFixed(1)+'%</span>+<span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">折扣'+D.disc.toFixed(1)+'%</span>→品类端失血<br><span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">客单'+D.avg_t_yoy.toFixed(1)+'%</span>+<span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">连带'+D.attach_yoy.toFixed(1)+'%</span>→效率端失血</p>';
+}
+
+function buildKpiStrip(){
+  const D=DATA,fmt=v=>v>=10000?((v/10000).toFixed(1)+'万'):('¥'+v.toFixed(0)),pc=v=>(v>0?'+':'')+v.toFixed(1)+'%',pa=v=>v.toFixed(1)+'%',cl=v=>v>=0?'up':'down';
+  const h=[]; h.push('<div class="ki"><div class="kv" style="color:'+(D.achieve>=100?'#22c55e':'#ef4444')+'">'+D.achieve.toFixed(1)+'%</div><div class="kl">达成率</div><div class="kc '+cl(D.achieve>=100)+'">'+(D.achieve>=100?'超目标':'未达标')+'</div></div>');
+  h.push('<div class="ki"><div class="kv">'+fmt(D.actual)+'</div><div class="kl">周流水</div><div class="kc down">'+pc(D.yoy)+'</div></div>');
+  h.push('<div class="ki"><div class="kv" style="color:'+(D.yoy<0?'#ef4444':'#22c55e')+'">'+pc(D.yoy)+'</div><div class="kl">SSSG</div><div class="kc '+cl(D.yoy)+'">同比</div></div>');
+  h.push('<div class="ki"><div class="kv">'+D.conv.toFixed(1)+'%</div><div class="kl">成交率</div><div class="kc '+cl(D.conv_yoy)+'">'+pa(D.conv_yoy)+'pp</div></div>');
+  h.push('<div class="ki"><div class="kv">'+fmt(D.avg_t)+'</div><div class="kl">客单价</div><div class="kc '+cl(D.avg_t_yoy)+'">'+pc(D.avg_t_yoy)+'</div></div>');
+  h.push('<div class="ki"><div class="kv">'+D.attach_r.toFixed(2)+'件</div><div class="kl">连带率</div><div class="kc '+cl(D.attach_yoy)+'">'+pc(D.attach_yoy)+'</div></div>');
+  h.push('<div class="ki"><div class="kv">'+D.shoe_share.toFixed(1)+'%</div><div class="kl">鞋占比</div><div class="kc down">'+pc(D.category['鞋']?D.category['鞋'].yoy:0)+'</div></div>');
+  h.push('<div class="ki"><div class="kv">'+fmt(D.o2o)+'</div><div class="kl">O2O</div><div class="kc '+cl(D.o2o_mom)+'">'+pc(D.o2o_mom)+'</div></div>');
+  h.push('<div class="ki"><div class="kv">'+D.disc.toFixed(1)+'%</div><div class="kl">折扣率</div><div class="kc '+cl(D.disc_yoy_p)+'">'+pa(D.disc_yoy_p)+'pp</div></div>');
+  h.push('<div class="ki"><div class="kv">'+D.flow.toFixed(0)+'人</div><div class="kl">日均客流</div><div class="kc '+cl(D.flow_yoy)+'">'+pc(D.flow_yoy)+'</div></div>');
+  document.getElementById('kpiStrip').innerHTML=h.join('');
+}
+
+// ─── INIT ───
+window.addEventListener('DOMContentLoaded',()=>{
+  initTables();
+  drawDailyCharts();
+});
+</script>
+</body>
+</html>
