@@ -1,0 +1,22 @@
+# WorkBuddy 项目文件
+.workbuddy/
+
+# 临时文件和脚本
+_tmp_*/
+*.tmp
+*.log
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# 沙箱测试
+sandbox_test/
+
+# 提取的数据（如果有敏感信息）
+extracted_data.json
+
+# 修复脚本（已合并到主文件）
+fix_season.js
+fix_season.py
