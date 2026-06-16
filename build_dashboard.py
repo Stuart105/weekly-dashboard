@@ -12,8 +12,9 @@ r7 = d['r7_kpi']; r15 = d['r15_price']; daily = d['daily']; cate = d['category']
 top = d['top_goods']; seas = d['seasonal']; member = d['member']
 
 store = "奥莱店华南区城市"
-period = "W23"  
-week_range = "2026.06.01-06.07"
+rc = d.get('report_config', {})
+period = rc.get('_version', 'W24')
+week_range = "2026.06.08-06.14"
 
 # ───────── helpers ─────────
 def pct(v, d=2): return f"{v:+.{d}f}%" if v is not None else '--'
@@ -226,13 +227,217 @@ payload = {
     'mtd': mtd_data, 'ytd': ytd_data, 'reg': reg_data,
 }
 
+# ───────── Dynamic analysis text variables ─────────
+# Severity/direction helpers
+def dw(v, up='增长', down='下降'): return up if v>0 else down if v<0 else '持平'
+
+# Revenue YoY severity
+if yoy_v >= 20: p1_sev = '暴增'
+elif yoy_v >= 10: p1_sev = '大幅增长'
+elif yoy_v >= 3: p1_sev = '增长'
+elif yoy_v > 0: p1_sev = '微增'
+elif yoy_v <= -20: p1_sev = '暴跌'
+elif yoy_v <= -10: p1_sev = '大幅下滑'
+elif yoy_v <= -3: p1_sev = '下滑'
+else: p1_sev = '微降'
+
+# Prior period values
+conv_prev = conv_v - conv_yoy
+attach_prev = attach_r / (1 + attach_yoy/100) if abs(1 + attach_yoy/100) > 0.01 else attach_r
+attach_gap = abs(attach_r - attach_prev)
+avg_t_prev = avg_t / (1 + avg_t_yoy/100) if abs(1 + avg_t_yoy/100) > 0.01 else avg_t
+avg_t_gap = abs(avg_t - avg_t_prev)
+
+# YoY revenue loss
+ly_revenue = actual_v / (1 + yoy_v/100) if abs(1 + yoy_v/100) > 0.01 else actual_v
+loss_vs_ly = abs(actual_v - ly_revenue)
+
+# Worst/best day
+worst_day_idx = min(range(7), key=lambda i: daily_rows[i]['a'])
+best_day_idx = max(range(7), key=lambda i: daily_rows[i]['a'])
+worst_day = daily_rows[worst_day_idx]
+best_day = daily_rows[best_day_idx]
+
+# Category extremes
+worst_cat = min(cat_data.keys(), key=lambda c: cat_data[c]['yoy'])
+best_cat = max(cat_data.keys(), key=lambda c: cat_data[c]['yoy'])
+worst_cat_yoy = cat_data[worst_cat]['yoy']
+best_cat_yoy = cat_data[best_cat]['yoy']
+shoe_zero_pct = 100 - cat_data['鞋']['sku_u']
+all_cats_down = all(cat_data[c]['yoy'] < -5 for c in cat_data)
+
+# Discount
+disc_zhe = (100 - disc_v) / 10  # e.g. 44.1% → ~5.6折
+concat_disc_sev = '持续走高' if disc_yoy_p > 0 else '有所改善'
+disc_cycle = '越打折越卖不动' if disc_yoy_p > 0 and mom_v < -5 else '虽有下降但折扣率高'
+
+# Sat loss / opportunity
+sat_loss = worst_day['t'] - worst_day['f']
+conv_lift_amt = (0.22 - conv_v/100) * (flow_v * 7) * avg_t
+attach_lift_amt = (4.5 - attach_r) * tkt_cnt * unit_p
+ticket_to_600 = (600 - avg_t) * tkt_cnt
+first_cat_name = worst_cat
+first_cat_yoy = worst_cat_yoy
+
+# P1 title and detail
+p1_title = f'整体流水同比{p1_sev}{abs(yoy_v):.1f}%'
+if achieve_v < 100:
+    p1_title += ' — 业绩未达标需重点关注'
+elif yoy_v < -10:
+    p1_title += ' — 同比大幅下滑需紧急干预'
+else:
+    p1_title += ' — 需关注增长质量'
+
+p1_loss = f'周流水同比流失 ≈ ¥{loss_vs_ly:,.0f}' if yoy_v < 0 else f'周流水同比增量 ≈ ¥{loss_vs_ly:,.0f}'
+
+conv_pp = f'（{pct(conv_yoy,1)}pp）'
+p1_detail = f'成交率 {pa(conv_v,2)}{conv_pp}'
+p1_detail += f' | 客单价 ¥{avg_t:,.0f}（同比{pct(avg_t_yoy,1)}）'
+p1_detail += f' | 连带率 {f2(attach_r)}（同比{pct(attach_yoy,1)}）'
+
+p1_root_cause_parts = []
+if disc_yoy_p > 0:
+    p1_root_cause_parts.append(f'折扣持续加深（{pa(disc_v,1)}/同比{disc_yoy_p:+.1f}pp）')
+if conv_yoy < -5:
+    p1_root_cause_parts.append(f'成交率从{pa(conv_prev,1)}降至{pa(conv_v,1)}，转化效率恶化')
+if attach_yoy < -5:
+    p1_root_cause_parts.append(f'连带率从{f2(attach_prev)}降至{f2(attach_r)}，每笔少卖约{attach_gap:.2f}件')
+p1_root_cause = '；'.join(p1_root_cause_parts) if p1_root_cause_parts else '多指标综合影响'
+
+# P2 - worst day
+p2_title = f'{worst_day["n"]}崩盘 — 达成率仅{pa(worst_day["a"],1)}，单日损失 ¥{sat_loss:,.0f}'
+# Find the weekday with max target multiple
+other_targets = [daily_rows[i]['t'] for i in range(7) if i != worst_day_idx]
+avg_other_target = sum(other_targets) / len(other_targets) if other_targets else worst_day['t']
+target_multiple = worst_day['t'] / avg_other_target if avg_other_target > 0 else 1
+best_day_achieve = best_day['a']
+
+p2_cause = f'目标设定过高（工作日均目标的{target_multiple:.1f}倍）；'
+if worst_day['v'] < best_day['v'] * 0.7:
+    p2_cause += f'客流仅{worst_day["v"]}人（不及{best_day["n"]}{best_day["v"]}人的{worst_day["v"]/best_day["v"]*100:.0f}%）；'
+p2_cause += f'客单价¥{worst_day["tk"]:,.0f}、连带率{worst_day["at"]:.2f}均低于{best_day["n"]}峰值'
+
+# P3 - Category
+p3_title = f'所有品类同比全面下挫 — {worst_cat}{pct(worst_cat_yoy,1)}最严重'
+p3_loss = '四品类无一幸免'
+if worst_cat_yoy < best_cat_yoy:
+    p3_loss += f'，{worst_cat}环比{pct(cat_data[worst_cat]["mom"],1)}加速恶化'
+
+cat_yoy_parts = []
+for cn in ['男装','女装','鞋','配件']:
+    if cn in cat_data:
+        cat_yoy_parts.append(f'{cn}{pct(cat_data[cn]["yoy"],1)}')
+p3_detail_cats = ' | '.join(cat_yoy_parts)
+
+p3_cause_parts = []
+if cat_data['鞋']['sku_u'] < 50:
+    p3_cause_parts.append(f'鞋SKU动销率仅{pa(cat_data["鞋"]["sku_u"],1)}，{shoe_zero_pct:.0f}%鞋SKU一周0动销')
+p3_disc_range = [cat_data[c]['disc'] for c in cat_data]
+p3_cause_parts.append(f'四品类折扣率均在{min(p3_disc_range):.0f}-{max(p3_disc_range):.0f}%区间，同质化打折无法形成差异化')
+p3_cause = '；'.join(p3_cause_parts)
+
+# P4 - Ticket/attach
+p4_title = f'客单价与连带率双降 — 低客单、低效率交易驱动'
+p4_loss = f'若客单价恢复至¥600，周增量 ≈ ¥{ticket_to_600:,.0f}'
+p4_detail = f'客单价 ¥{avg_t:,.0f}（同比{pct(avg_t_yoy,1)}） | 连带率 {f2(attach_r)}件（同比{pct(attach_yoy,1)}） | 件单价 ¥{unit_p:,.0f}（同比{pct(unit_yoy,1)}）'
+if abs(attach_yoy) > abs(avg_t_yoy):
+    p4_detail += ' → 连带效率下降是主因'
+p4_cause = f'每笔少卖约{attach_gap:.2f}件，导购推荐和搭配销售能力下降；'
+if worst_day['at'] < best_day['at']:
+    p4_cause += f'周末客流多但连带反而差（{worst_day["n"]}{worst_day["at"]:.2f}/{best_day["n"]}{best_day["at"]:.2f}）；'
+p4_cause += '折扣环境导致顾客倾向买单件折扣品而非多件搭配'
+
+# P5 - Discount
+p5_title = f'折扣率{pa(disc_v,1)}{concat_disc_sev} — {disc_cycle}'
+p5_loss = f'折扣率环比{pct(disc_mom,1)}pp但流水环比{pct(mom_v,1)}'
+p5_detail = f'综合折扣{pa(disc_v,1)}（约{disc_zhe:.1f}折）| 同比{disc_yoy_p:+.2f}pp | 环比{disc_mom:+.2f}pp'
+p5_detail += '<br>折扣加深→流水反降→继续加深折扣的恶性循环正在形成'
+p5_cause = f'{pa(disc_v,1)}折扣在奥莱体系中也属偏高；顾客对"奥莱=常年打折"形成预期，非打折商品难以动销；同行竞争压力迫使持续让利但效果递减'
+
+# P6 - Seasonal
+p6_lbl_cloth_evergreen = '26年常青(服)'
+p6_f_cloth = seas_data.get(p6_lbl_cloth_evergreen, {}).get('f', 0)
+p6_d_cloth = seas_data.get(p6_lbl_cloth_evergreen, {}).get('d', 0)
+p6_su_cloth = seas_data.get(p6_lbl_cloth_evergreen, {}).get('su', 0)
+p6_q2_cloth_d = seas_data.get('2026Q2(服)', {}).get('d', 0)
+p6_title = f'新品表现乏力 — {p6_lbl_cloth_evergreen}折扣率{pa(p6_d_cloth,1)}、动销率低'
+p6_tag = f'{p6_lbl_cloth_evergreen}折扣{pa(p6_d_cloth,1)}，动销率{pa(p6_su_cloth,1)}'
+p6_detail = f'2026Q2(服)折扣{pa(p6_q2_cloth_d,1)}（约{max(1, p6_q2_cloth_d/10):.0f}折），当季新品也需大幅让利'
+# Get min/max sat among clothing items
+cloth_sats = [seas_data[k]['sat'] for k in seas_data if '(服)' in k and seas_data[k].get('sat', 0) > 0]
+if cloth_sats:
+    p6_detail += f'<br>新品可满足率仅{min(cloth_sats):.0f}-{max(cloth_sats):.0f}%，新品备货极度保守'
+
+# Opps text
+opp1_title = f'{worst_day["n"]}复苏攻坚 — 夺回单日 ¥{sat_loss:,.0f} 增量'
+opp2_title = f'流量激活：成交率从{pa(conv_v,1)}提升至{pa(conv_v+4,1)}'
+opp3_title = f'鞋类SKU瘦身+爆款深耕 — 动销率{pa(cat_data["鞋"]["sku_u"],1)}→50%+'
+opp4_title = f'连带攻坚：从{f2(attach_r)}件拉升至4.5件'
+opp5_title = f'折扣管控：从{pa(disc_v,1)}控制到{pa(disc_v-2,1)}以内'
+opp6_title = f'O2O渠道发力 + 周日巩固'
+
+# FULL_TEXT pre-computed strings
+avg_t_dir = '增长' if avg_t_yoy > 0 else '下降'
+attach_dir = '增长' if attach_yoy > 0 else '下滑'
+disc_str = "折扣加深但流水下降，'打折拉销售'策略已失效" if disc_yoy_p > 0 and mom_v < 0 else "折扣控制较好"
+avg_t_analysis = f"客单价{avg_t_dir}主要受连带率{attach_dir}影响" if abs(avg_t_yoy) > 0 else "客单价基本持平"
+achieve_assessment = "达成率表面达标但增长质量堪忧" if achieve_v >= 100 else "达成率偏低需重点关注"
+flow_conv_analysis = "客流增长但成交率下降—'进店不买'问题突出" if flow_yoy > 0 and conv_yoy < 0 else "客流与成交率同步波动"
+
+# ───────── Dynamic FULL_TEXT ─────────
+ytd_parts = []
+for cn in ['男装','女装','鞋','配件']:
+    if cn in cat_data:
+        ytd_parts.append(f'{cn}¥{cat_data[cn]["flow"]/10000:.1f}万（同比{pct(cat_data[cn]["yoy"],1)}）')
+
+# Find pos yoy day
+pos_days = [(daily_rows[i]['n'], daily_rows[i]['y']) for i in range(7) if daily_rows[i]['y'] > 0]
+pos_day_str = ''
+for dn, dy in pos_days:
+    pos_day_str += f'{dn}同比正增{pct(dy,1)}、'
+pos_day_str = pos_day_str.rstrip('、')
+
+FULL_TEXT_CONTENT = f'''<b>{period}周报分析稿</b> | {store} | {week_range}
+
+<b>一、周分析</b>
+
+1、达成：本周目标¥{target_v/10000:.1f}万，实际¥{actual_v/10000:.1f}万，达成率{pa(achieve_v,2)}，{"超目标" if achieve_v>=100 else "未达标"}¥{abs(actual_v-target_v)/10000:.1f}万。但同比{pct(yoy_v,2)}，同店同比{pct(sssg_v,2)}，环比{pct(mom_v,2)}。{achieve_assessment}。
+
+2、成交率与客流：成交率{pa(conv_v,2)}（同比{pct(conv_yoy,1)}pp），日均客流{flow_v:.0f}人/天（同比{pct(flow_yoy,1)}），周客单量{tkt_cnt:.0f}笔。{flow_conv_analysis}。
+
+3、客单价与连带：客单价¥{avg_t:,.0f}（同比{pct(avg_t_yoy,1)}），连带率{f2(attach_r)}件（同比{pct(attach_yoy,1)}），件单价¥{unit_p:,.0f}（同比{pct(unit_yoy,1)}）。{avg_t_analysis}。
+
+4、鞋类：流水¥{cat_data["鞋"]["flow"]/10000:.1f}万，占比{pa(cat_data["鞋"]["f_share"],1)}，同比{pct(cat_data["鞋"]["yoy"],1)}。SKU动销率仅{pa(cat_data["鞋"]["sku_u"],1)}，{cat_data["鞋"]["sku_s"]}个在售SKU中约{shoe_zero_pct:.0f}%一周0动销。
+
+5、服装品类：男装¥{cat_data["男装"]["flow"]/10000:.1f}万（同比{pct(cat_data["男装"]["yoy"],1)}），女装¥{cat_data["女装"]["flow"]/10000:.1f}万（同比{pct(cat_data["女装"]["yoy"],1)}）。
+
+6、配件：¥{cat_data["配件"]["flow"]/10000:.1f}万（同比{pct(cat_data["配件"]["yoy"],1)}），但{cat_data["配件"]["sku_s"]}个在售SKU中动销率仅{pa(cat_data["配件"]["sku_u"],1)}，每SKU产出{money(cat_data["配件"]["flow"]/cat_data["配件"]["sku_s"])}。
+
+7、日别结构：周一¥{daily_rows[0]["f"]/10000:.1f}万（达成{pa(daily_rows[0]["a"],1)}）→ 周二¥{daily_rows[1]["f"]/10000:.1f}万 → 周三¥{daily_rows[2]["f"]/10000:.1f}万 → 周四¥{daily_rows[3]["f"]/10000:.1f}万 → 周五¥{daily_rows[4]["f"]/10000:.1f}万（同比{pct(daily_rows[4]["y"],1)}）→ <b>{worst_day["n"]}¥{worst_day["f"]/10000:.1f}万（达成{pa(worst_day["a"],1)}，全周最低）</b>→ {best_day["n"]}¥{best_day["f"]/10000:.1f}万（达成{pa(best_day["a"],1)}，全周最高）。
+
+8、折扣率：{pa(disc_v,1)}（同比{disc_yoy_p:+.2f}pp、环比{disc_mom:+.2f}pp），约{disc_zhe:.1f}折。{disc_str}。
+
+9、线上O2O：¥{o2o_v/10000:.2f}万（占比{pa(o2o_pct,1)}，环比{pct(o2o_mom,1)}），O2O是少数增长亮点。
+
+<b>二、本周重点改善策略</b>
+
+1、{worst_day["n"]}复苏：周五企微推送"{worst_day["n"]}满399-30"券，设"老带新"裂变，{worst_day["n"]}14-18点最强导购值守。目标{worst_day["n"]}达成80%+。
+
+2、成交率抢救（{conv_v:.0f}%→{conv_v+4:.0f}%）：进店三句话话术，试穿送袜子，收银台加价购。目标周增约¥{conv_lift_amt:,.0f}。
+
+3、SKU瘦身+爆款深耕：筛查2周0动销SKU申请调出，锁定TOP20鞋款加库存深度。目标鞋动销率→50%+。
+
+4、连带攻坚（{attach_r:.2f}→4.5件）："1+1+1"搭配法，跨界连带陈列，"连带王"即时奖。目标周增约¥{(4.5-attach_r)*tkt_cnt*unit_p:,.0f}。
+
+5、折扣管控（{disc_v:.0f}%→{disc_v-2:.0f}%）：新品首2周正价保护，满减替代直降，品类折扣分治。'''
+
 # ───────── HTML generation ─────────
 html = f'''<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>W23 周报分析仪表板 | {store}</title>
+<title>{period} 周报分析仪表板 | {store}</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -339,7 +544,7 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
 <div class="toast" id="toast"></div>
 
 <div class="header">
-  <div><h1>📊 W23 周报分析仪表板</h1><div class="meta">{store} | {week_range}</div></div>
+  <div><h1>📊 {period} 周报分析仪表板</h1><div class="meta">{store} | {week_range}</div></div>
   <div class="actions">
     <button class="btn btn-primary" id="btnImport" onclick="triggerImport()">📥 导入周报</button>
     <button class="btn btn-outline" onclick="refreshAllCharts()">🔄 刷新图表</button>
@@ -461,140 +666,11 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
   </div>
 
   <div id="tab-problems" class="analysis-tab" style="display:block">
-    <div class="pc open" onclick="toggleCard(this)">
-      <div class="phead"><span class="pnum">1</span><h4>整体流水同比暴跌-31.62% — 业绩断崖式下滑</h4><span class="toggle-icon">▶</span></div>
-      <div class="pbody">
-        <span class="loss-tag">周流水同比流失 ≈ ¥50,198</span>
-        <div class="dbox">
-          本周流水 <b>¥{actual_v:,.0f}</b> | 同比 <b style="color:var(--red)">{pct(yoy_v,2)}</b> | 达成率 <b>{pa(achieve_v,2)}</b><br>
-          成交率 <b>{pa(conv_v,2)}</b>（同比-8.37pp） | 客单价 <b>¥{avg_t:,.0f}</b>（同比-14.1%） | 连带率 <b>{f2(attach_r)}</b>（同比-14.4%）<br>
-          <span style="color:var(--sub);font-size:11px">若恢复去年同期：周流水应达 ¥{actual_v/(1+yoy_v/100):,.0f}</span>
-        </div>
-        <b>根因：</b>折扣持续加深（44.1%/+2.8pp）但流水反降，说明不是价格问题而是客流质量和产品吸引力下降；成交率从26.5%降至18.1%，每100人进店少成交8人。
-      </div>
-    </div>
-
-    <div class="pc open" onclick="toggleCard(this)">
-      <div class="phead"><span class="pnum">2</span><h4>周六崩盘 — 达成率仅51.69%，单日损失 ¥{26280.1-13584.82:,.0f}</h4><span class="toggle-icon">▶</span></div>
-      <div class="pbody">
-        <span class="loss-tag">预估损失 ≈ ¥{26280.10-13584.82:,.0f}</span>
-        <div class="dbox">
-          周六目标 ¥{daily_rows[5]['t']:,.0f} → 实际 <b style="color:var(--red)">¥{daily_rows[5]['f']:,.0f}</b> | 达成 <b style="color:var(--red)">{pa(daily_rows[5]['a'],1)}</b> | 同比 <b style="color:var(--red)">{pct(daily_rows[5]['y'],1)}</b><br>
-          客流量 {daily_rows[5]['v']}人 | 成交率 {pa(daily_rows[5]['c'],1)} | 客单价 ¥{daily_rows[5]['tk']:,.0f}
-        </div>
-        <b>根因：</b>周六目标设定过高（工作日目标的2.5倍）；客流仅198人（不及周日343人的60%）；客单价¥{daily_rows[5]['tk']:,.0f}、连带率{daily_rows[5]['at']:.2f}均低于周四峰值。
-      </div>
-    </div>
-
-    <div class="pc open" onclick="toggleCard(this)">
-      <div class="phead"><span class="pnum">3</span><h4>所有品类同比全面下挫 — 鞋类{pct(cat_data['鞋']['yoy'],1)}最严重</h4><span class="toggle-icon">▶</span></div>
-      <div class="pbody">
-        <span class="loss-tag">四品类无一幸免，鞋类环比{pct(cat_data['鞋']['mom'],1)}加速恶化</span>
-        <div class="dbox">
-          男装{pct(cat_data['男装']['yoy'],1)} | 女装{pct(cat_data['女装']['yoy'],1)} | 鞋{pct(cat_data['鞋']['yoy'],1)} | 配件{pct(cat_data['配件']['yoy'],1)}<br>
-          鞋SKU动销率仅{pa(cat_data['鞋']['sku_u'],1)}，64%鞋SKU一周0动销；配件每SKU产出{money(cat_data['配件']['flow']/cat_data['配件']['sku_s'])}
-        </div>
-        <b>根因：</b>鞋类作为核心品类失速最严重，124个在售SKU中大量躺平；四品类折扣率均在43-45%区间，同质化打折无法形成差异化。
-      </div>
-    </div>
-
-    <div class="pc" onclick="toggleCard(this)">
-      <div class="phead"><span class="pnum">4</span><h4>客单价与连带率双降 — 低客单、低效率交易驱动</h4><span class="toggle-icon">▶</span></div>
-      <div class="pbody">
-        <span class="loss-tag">若客单价恢复至¥600，周增量 ≈ ¥{600*tkt_cnt-actual_v:,.0f}</span>
-        <div class="dbox">
-          客单价 ¥{avg_t:,.0f}（同比-14.1%） | 连带率 {f2(attach_r)}件（同比-14.4%） | 件单价 ¥{unit_p:,.0f}（基本持平）<br>
-          客单价下降 = 连带率从4.57降至3.91（-14.4%）× 件单价持平 → <b>连带效率下降是主因</b>
-        </div>
-        <b>根因：</b>每笔少卖0.66件，导购推荐和搭配销售能力下降；周末客流多但连带反而差（周六3.54/周日3.39）；折扣环境导致顾客倾向买单件折扣品而非多件搭配。
-      </div>
-    </div>
-
-    <div class="pc" onclick="toggleCard(this)">
-      <div class="phead"><span class="pnum">5</span><h4>折扣率{pa(disc_v,1)}持续走高 — 越打折越卖不动</h4><span class="toggle-icon">▶</span></div>
-      <div class="pbody">
-        <span class="loss-tag">折扣率环比{pct(disc_mom,1)}pp但流水环比{pct(mom_v,1)}</span>
-        <div class="dbox">
-          综合折扣{pa(disc_v,1)}（约5.6折）| 同比{disc_yoy_p:+.2f}pp | 环比{disc_mom:+.2f}pp<br>
-          折扣加深→流水反降→继续加深折扣的恶性循环正在形成
-        </div>
-        <b>根因：</b>44.1%折扣在奥莱体系中也属偏高；顾客对"奥莱=常年打折"形成预期，非打折商品难以动销；同行竞争压力迫使持续让利但效果递减。
-      </div>
-    </div>
-
-    <div class="pc" onclick="toggleCard(this)">
-      <div class="phead"><span class="pnum">6</span><h4>新品表现乏力 — 26年常青款折扣率{pa(seas_data.get('26年常青(服)',{}).get('d',0),1)}、动销率低</h4><span class="toggle-icon">▶</span></div>
-      <div class="pbody">
-        <span class="loss-tag">26年常青(服)折扣{pa(seas_data.get('26年常青(服)',{}).get('d',0),1)}，动销率{pa(seas_data.get('26年常青(服)',{}).get('su',0),1)}</span>
-        <div class="dbox">
-          2026Q2(服)折扣{pa(seas_data.get('2026Q2(服)',{}).get('d',0),1)}（约4折），当季新品也需大幅让利<br>
-          新品可满足率仅2-6%，新品备货极度保守
-        </div>
-        <b>根因：</b>新品即打折→新品价值感知弱→不敢深库存→不敢推→卖不动→继续打折的恶性循环。
-      </div>
-    </div>
+    <!-- JS dynamic renderAnalysis() 动态填充 -->
   </div>
 
   <div id="tab-opps" class="analysis-tab" style="display:none">
-    <div class="oc" onclick="toggleCard(this)">
-      <div class="ohead"><span class="onum">1</span><h4>周六复苏攻坚 — 夺回单日 ¥{26280.1-13584.82:,.0f} 增量</h4><span class="toggle-icon">▶</span></div>
-      <div class="obody">
-        <b>目标：</b>周六达成率从51.69%恢复至80%+<br>
-        <b>方案A — 周五预锁定：</b>周五晚场推"周六专属券：满399-30（限前30单）"，企微+短信推送近30天消费会员<br>
-        <b>方案B — 周六社交引流：</b>"带朋友到店各减¥20"裂变活动<br>
-        <b>方案C — 排班优化：</b>周六14-18点最强导购值守高价值区域，设单日客单价PK奖
-      </div>
-    </div>
-
-    <div class="oc" onclick="toggleCard(this)">
-      <div class="ohead"><span class="onum">2</span><h4>流量激活：成交率从18.1%提升至22%</h4><span class="toggle-icon">▶</span></div>
-      <div class="obody">
-        <b>目标：</b>提升成交率4pp，周增流水≈¥{((0.22-0.1812)*(flow_v*7)*avg_t):,.0f}<br>
-        <b>方案A — 进店话术：</b>"欢迎光临，今天鞋/服装新品到店，您可以先看看"<br>
-        <b>方案B — 试穿激励：</b>"试穿3件以上送品牌袜子一双"<br>
-        <b>方案C — 加价购：</b>结账时推"加¥59换购指定T恤"
-      </div>
-    </div>
-
-    <div class="oc" onclick="toggleCard(this)">
-      <div class="ohead"><span class="onum">3</span><h4>鞋类SKU瘦身+爆款深耕 — 动销率{pa(cat_data['鞋']['sku_u'],1)}→50%+</h4><span class="toggle-icon">▶</span></div>
-      <div class="obody">
-        <b>目标：</b>鞋SKU动销率从{pa(cat_data['鞋']['sku_u'],1)}提升至50%+<br>
-        <b>方案A — 断舍离：</b>筛查连续2周0动销鞋SKU申请调出<br>
-        <b>方案B — TOP20深耕：</b>锁定TOP20鞋款加库存深度（满足率36.5%→50%+）<br>
-        <b>方案C — 配件同步：</b>{cat_data['配件']['sku_s']}个配件SKU清理0动销，每SKU产出{money(cat_data['配件']['flow']/cat_data['配件']['sku_s'])}→¥200+
-      </div>
-    </div>
-
-    <div class="oc" onclick="toggleCard(this)">
-      <div class="ohead"><span class="onum">4</span><h4>连带攻坚：从{f2(attach_r)}件拉升至4.5件</h4><span class="toggle-icon">▶</span></div>
-      <div class="obody">
-        <b>目标：</b>连带率提升0.6件，周流水增量≈¥{((4.5-attach_r)*tkt_cnt*unit_p):,.0f}<br>
-        <b>方案A — "1+1+1"搭配法：</b>主推品+搭配品+连带品的完整Look推荐<br>
-        <b>方案B — 鞋区旁陈列：</b>"买鞋+¥99换购指定短裤"跨界连带<br>
-        <b>方案C — "连带王"奖：</b>单笔超4件¥10，超6件¥20，下班即兑现
-      </div>
-    </div>
-
-    <div class="oc" onclick="toggleCard(this)">
-      <div class="ohead"><span class="onum">5</span><h4>折扣管控：从{pa(disc_v,1)}控制到42%以内</h4><span class="toggle-icon">▶</span></div>
-      <div class="obody">
-        <b>目标：</b>综合折扣率控制在42%以内<br>
-        <b>方案A — 新品保护期：</b>26年常青款前2周正价销售<br>
-        <b>方案B — 满减替代直降：</b>"满599减60、满999减150"替代全场X折<br>
-        <b>方案C — 品折扣中折：</b>鞋类保持折扣力度，服装适度收紧折扣
-      </div>
-    </div>
-
-    <div class="oc" onclick="toggleCard(this)">
-      <div class="ohead"><span class="onum">6</span><h4>O2O渠道发力 + 周日巩固</h4><span class="toggle-icon">▶</span></div>
-      <div class="obody">
-        <b>目标：</b>O2O从{money(o2o_v)}提升至¥8,000+（占比7%+）<br>
-        <b>方案A — 周日会员维护：</b>周日流水¥{daily_rows[6]['f']:,.0f}是全周最强，保持不丢失<br>
-        <b>方案B — PAD+官网同步推：</b>线下畅销款标注"线上同款可购"<br>
-        <b>方案C — 周四模式复制：</b>周四达成127%/客单价¥{daily_rows[3]['tk']:,.0f}/连带{daily_rows[3]['at']:.2f}，分析成功因素复制到其他工作日
-      </div>
-    </div>
+    <!-- JS dynamic renderAnalysis() 动态填充 -->
   </div>
 
   <div id="tab-fulltext" class="analysis-tab" style="display:none">
@@ -602,25 +678,20 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
   </div>
 </div>
 
-<!-- Summary -->
+<!-- Summary - 由 JS renderAnalysis() 动态填充 -->
 <div class="summary-box">
-  <h3 style="color:#fbbf24;margin-bottom:12px;">总结：六大问题的逻辑关系</h3>
-  <p style="font-size:13px;line-height:2;opacity:.9">
-    <span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">P1 同比大跌</span> + 
-    <span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">P2 周六崩盘</span> → 客流端失血<br>
-    <span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">P3 品类全跌</span> + 
-    <span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">P5 折扣失控</span> → 品类端失血<br>
-    <span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">P4 客单/连带双降</span> + 
-    <span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">P6 新品乏力</span> → 效率端失血
+  <h3 style="color:#fbbf24;margin-bottom:12px;">总结：核心问题逻辑关系</h3>
+  <p style="font-size:13px;line-height:2;opacity:.9" id="summaryContent">
+    加载中...
   </p>
   <p style="font-size:14px;line-height:1.9;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.2)">
     <strong style="color:#fca5a5;">三大失血点（客流 → 品类 → 效率）</strong>互为因果。<br>
-    破解之道：<strong style="color:#86efac;">周六引流（P1/2）→ SKU瘦身+深耕（P3）→ 连带攻坚（P4）→ 折扣优化（P5）→ 新品策略+O2O（P6）</strong><br>
-    六项措施联动落地，预计释放 <strong style="color:#fbbf24;">¥15,000-20,000/周</strong> 增量空间。
+    破解之道：<strong style="color:#86efac;">引流 → SKU瘦身+深耕 → 连带攻坚 → 折扣优化 → 新品策略+O2O</strong><br>
+    六项措施联动落地，预计释放 <strong style="color:#fbbf24;">增量空间</strong>。
   </p>
 </div>
 
-<div class="footer">{store} | W23 周报分析仪表板 | EdgeOne Pages 部署 | AI店长出品</div>
+<div class="footer">{store} | {period} 周报分析仪表板 | EdgeOne Pages 部署 | AI店长出品</div>
 
 </div>
 
@@ -876,39 +947,7 @@ function refreshAllCharts() {{
 }}
 
 // Full text content
-const FULL_TEXT=`<b>W23周报分析稿</b> | {store} | {week_range}
-
-<b>一、周分析</b>
-
-1、达成：本周目标¥{target_v/10000:.1f}万，实际¥{actual_v/10000:.1f}万，达成率{pa(achieve_v,2)}，超目标¥{(actual_v-target_v)/10000:.1f}万。但同比{pct(yoy_v,2)}，同店同比{pct(sssg_v,2)}，环比{pct(mom_v,2)}。达成率表面达标但增长质量堪忧。
-
-2、成交率与客流：成交率{pa(conv_v,2)}（同比{pct(conv_yoy)}pp），日均客流{flow_v:.0f}人/天（同比{pct(flow_yoy)}），周客单量{tkt_cnt:.0f}笔。客流增长但成交率下降——"进店不买"问题突出。
-
-3、客单价与连带：客单价¥{avg_t:,.0f}（同比{pct(avg_t_yoy,1)}），连带率{f2(attach_r)}件（同比{pct(attach_yoy,1)}），件单价¥{unit_p:,.0f}（同比{pct(unit_yoy,1)}）。客单价下降主要拖累是连带率下滑，每笔交易少卖约0.66件。
-
-4、鞋类：流水¥{cat_data["鞋"]["flow"]/10000:.1f}万，占比{pa(cat_data["鞋"]["f_share"],1)}，同比{pct(cat_data["鞋"]["yoy"],1)}。SKU动销率仅{pa(cat_data["鞋"]["sku_u"],1)}，{cat_data["鞋"]["sku_s"]}个在售SKU中约64%一周0动销。
-
-5、服装品类：男装¥{cat_data["男装"]["flow"]/10000:.1f}万（同比{pct(cat_data["男装"]["yoy"],1)}），女装¥{cat_data["女装"]["flow"]/10000:.1f}万（同比{pct(cat_data["女装"]["yoy"],1)}）。
-
-6、配件：¥{cat_data["配件"]["flow"]/10000:.1f}万（同比{pct(cat_data["配件"]["yoy"],1)}，唯一环比微增{pct(cat_data["配件"]["mom"],1)}），但{cat_data["配件"]["sku_s"]}个在售SKU中动销率仅{pa(cat_data["配件"]["sku_u"],1)}，每SKU产出{money(cat_data["配件"]["flow"]/cat_data["配件"]["sku_s"])}。
-
-7、日别结构：周一¥{daily_rows[0]["f"]/10000:.1f}万（达成{pa(daily_rows[0]["a"],1)}）→ 周二¥{daily_rows[1]["f"]/10000:.1f}万 → 周三¥{daily_rows[2]["f"]/10000:.1f}万 → 周四¥{daily_rows[3]["f"]/10000:.1f}万 → 周五¥{daily_rows[4]["f"]/10000:.1f}万（唯一同比正增{pct(daily_rows[4]["y"],1)}）→ <b>周六¥{daily_rows[5]["f"]/10000:.1f}万（达成{pa(daily_rows[5]["a"],1)}，全周最低）</b>→ 周日¥{daily_rows[6]["f"]/10000:.1f}万（达成{pa(daily_rows[6]["a"],1)}，全周最高）。
-
-8、折扣率：{pa(disc_v,1)}（同比{disc_yoy_p:+.2f}pp、环比{disc_mom:+.2f}pp），约5.6折。折扣加深但流水下降，"打折拉销售"策略已失效。
-
-9、线上O2O：¥{o2o_v/10000:.2f}万（占比{pa(o2o_pct,1)}，环比{pct(o2o_mom,1)}），O2O是少数增长亮点。
-
-<b>二、本周重点改善策略</b>
-
-1、周六复苏：周五企微推送"周六满399-30"券，设"老带新"裂变，周六14-18点最强导购值守。目标周六达成80%+。
-
-2、成交率抢救（18%→22%）：进店三句话话术，试穿送袜子，收银台加价购。目标周增约¥12,000。
-
-3、SKU瘦身+爆款深耕：筛查2周0动销SKU申请调出，锁定TOP20鞋款加库存深度。目标鞋动销率→50%+。
-
-4、连带攻坚（3.91→4.5件）："1+1+1"搭配法，跨界连带陈列，"连带王"即时奖。目标周增约¥{(4.5-attach_r)*tkt_cnt*unit_p:,.0f}。
-
-5、折扣管控（44%→42%）：新品首2周正价保护，满减替代直降，品类折扣分治。`;
+const FULL_TEXT=`{FULL_TEXT_CONTENT}`;
 
 // ─── IMPORT & PARSE EXCEL ───
 function showToast(msg,type){{
@@ -1108,6 +1147,7 @@ function buildKpiStrip(){{
 window.addEventListener('DOMContentLoaded',()=>{{
   initTables();
   drawDailyCharts();
+  renderAnalysis();
 }});
 </script>
 </body>
