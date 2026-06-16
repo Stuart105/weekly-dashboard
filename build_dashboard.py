@@ -77,7 +77,9 @@ top_data = {}
 for rk, lbl in top_labels.items():
     if rk in top:
         td = top[rk]['data']
-        top_data[lbl] = {k: float(td.get(k,0))*100 for k in ['4','6','8','10','13'] if k in td}
+        filtered = {k: float(td.get(k,0))*100 for k in ['4','6','8','10','13'] if k in td}
+        if filtered:  # skip empty entries (e.g. TOP100 with no 4/6/8/10/13 cols)
+            top_data[lbl] = filtered
 
 # KPI matrix for table
 target_v = r7['14']; actual_v = r7['17']; achieve_v = r7['20']*100
@@ -762,6 +764,7 @@ function initTables() {{
   // TOP table
   let tt='';
   for(const[tn,td]of Object.entries(D.top)){{
+    if(td['4']===undefined) continue;
     tt+=`<tr><td>${{tn}}</td><td>${{td['4'].toFixed(2)}}%</td><td>${{td['6'].toFixed(2)}}%</td><td>${{td['8'].toFixed(2)}}%</td><td>${{td['10'].toFixed(2)}}%</td></tr>`;
   }}
   document.getElementById('topTable').innerHTML=tt;
