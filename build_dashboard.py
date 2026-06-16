@@ -575,7 +575,6 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
     <button class="tab active" onclick="switchDataTab('daily')">日别趋势</button>
     <button class="tab" onclick="switchDataTab('matrix')">KPI矩阵</button>
     <button class="tab" onclick="switchDataTab('cate')">品类分析</button>
-    <button class="tab" onclick="switchDataTab('top')">TOP集中度</button>
     <button class="tab" onclick="switchDataTab('seas')">新品季节</button>
     <button class="tab" onclick="switchDataTab('sub')">子品类</button>
   </div>
@@ -611,14 +610,6 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
     <table class="tbl" style="margin-top:14px">
       <thead><tr><th>品类</th><th>流水</th><th>销售占比</th><th>同比</th><th>环比</th><th>折扣率</th><th>SKU在售</th><th>SKU动销率</th><th>库存数量</th><th>库存占比</th><th>匹配分析</th></tr></thead>
       <tbody id="cateTable"></tbody>
-    </table>
-  </div>
-
-  <div id="tab-top" class="data-tab" style="display:none">
-    <div class="chart-wrap" style="max-height:300px"><canvas id="chartTop"></canvas></div>
-    <table class="tbl" style="margin-top:14px">
-      <thead><tr><th>层级</th><th>销量占比</th><th>流水占比</th><th>库存金额占比</th><th>可满足率</th></tr></thead>
-      <tbody id="topTable"></tbody>
     </table>
   </div>
 
@@ -709,7 +700,6 @@ function switchDataTab(name) {{
   event.target.classList.add('active');
   if(name==='daily'){{ drawDailyCharts(); }}
   if(name==='cate'){{ drawCateCharts(); }}
-  if(name==='top'){{ drawTopChart(); }}
   if(name==='seas'){{ drawSeasCharts(); }}
 }}
 
@@ -760,14 +750,6 @@ function initTables() {{
     <td>${{cd.s_qty.toLocaleString()}}</td><td>${{cd.s_q_share.toFixed(2)}}%</td><td class="${{mcls}}">${{cd.match_lbl}}</td></tr>`;
   }}
   document.getElementById('cateTable').innerHTML=ct;
-
-  // TOP table
-  let tt='';
-  for(const[tn,td]of Object.entries(D.top)){{
-    if(td['4']===undefined) continue;
-    tt+=`<tr><td>${{tn}}</td><td>${{td['4'].toFixed(2)}}%</td><td>${{td['6'].toFixed(2)}}%</td><td>${{td['8'].toFixed(2)}}%</td><td>${{td['10'].toFixed(2)}}%</td></tr>`;
-  }}
-  document.getElementById('topTable').innerHTML=tt;
 
   // Season table
   let st='';
@@ -894,22 +876,6 @@ function drawCateCharts() {{
   }});
 }}
 
-function drawTopChart() {{
-  const D=DATA, labels=Object.keys(D.top);
-  const fShares=labels.map(l=>D.top[l]['6']), vShares=labels.map(l=>D.top[l]['4']);
-
-  destroyChart('chartTop');
-  chartInstances.chartTop = new Chart(document.getElementById('chartTop'),{{
-    type:'bar', data:{{ labels, datasets:[
-      {{ label:'流水占比', data:fShares, backgroundColor:colors.blueBg, borderColor:colors.blue, borderWidth:1.5, borderRadius:4 }},
-      {{ label:'销量占比', data:vShares, backgroundColor:colors.greenBg, borderColor:colors.green, borderWidth:1.5, borderRadius:4 }}
-    ]}},
-    options:{{ responsive:true, maintainAspectRatio:false,
-      plugins:{{ title:{{display:true,text:'TOP商品集中度',font:{{size:14}}}}, legend:{{position:'bottom'}} }},
-      scales:{{ y:{{ ticks:{{ callback:v=>v.toFixed(0)+'%'}},max:110 }} }}
-    }}
-  }});
-}}
 
 function drawSeasCharts() {{
   const D=DATA, labels=Object.keys(D.seas).slice(0,5); // clothing only
@@ -945,7 +911,6 @@ function refreshAllCharts() {{
   drawDailyCharts();
   const activeTab=document.querySelector('.data-tab[style*="block"]');
   if(activeTab&&activeTab.id==='tab-cate')drawCateCharts();
-  if(activeTab&&activeTab.id==='tab-top')drawTopChart();
   if(activeTab&&activeTab.id==='tab-seas')drawSeasCharts();
 }}
 
