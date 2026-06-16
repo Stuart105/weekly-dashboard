@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>W24周报深度分析报告</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:#f0f2f5;color:#333;line-height:1.7}
+.header{background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);color:#fff;padding:40px 0 30px;text-align:center}
+.header h1{font-size:28px;margin-bottom:8px;letter-spacing:2px}
+.header .meta{font-size:14px;opacity:.8;margin-top:10px}
+.header .meta span{margin:0 15px}
+.container{max-width:1100px;margin:0 auto;padding:20px}
+.section{background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);margin-bottom:24px;overflow:hidden}
+.section-title{background:linear-gradient(135deg,#0f3460,#1a5276);color:#fff;padding:14px 24px;font-size:18px;font-weight:600;letter-spacing:1px}
+.section-body{padding:20px 24px}
+.sub-title{font-size:16px;font-weight:600;color:#0f3460;margin:18px 0 10px;padding-bottom:6px;border-bottom:2px solid #e8edf3}
+.sub-title:first-child{margin-top:0}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:12px 0}
+.kpi-card{background:linear-gradient(135deg,#f8f9fa,#fff);border:1px solid #e8edf3;border-radius:8px;padding:14px 16px;text-align:center}
+.kpi-card .label{font-size:12px;color:#888;margin-bottom:4px}
+.kpi-card .value{font-size:24px;font-weight:700;color:#0f3460}
+.kpi-card .sub{font-size:11px;color:#999;margin-top:2px}
+.kpi-card .down{color:#e74c3c}
+.kpi-card .up{color:#27ae60}
+.kpi-card .highlight{color:#e67e22}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}
+th{background:#f0f4f8;color:#0f3460;font-weight:600;padding:10px 12px;text-align:center;border:1px solid #dde4ec}
+td{padding:9px 12px;text-align:center;border:1px solid #e8edf3}
+tr:nth-child(even){background:#f8fafc}
+tr:hover{background:#eef4ff}
+.num{font-family:"SF Mono","Consolas",monospace;text-align:right}
+.badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:600}
+.badge-red{background:#fce4e4;color:#c0392b}
+.badge-green{background:#e8f8e8;color:#27ae60}
+.badge-orange{background:#fef5e7;color:#e67e22}
+.badge-blue{background:#e8f0fe;color:#2980b9}
+.insight{background:#fef9e7;border-left:4px solid #f1c40f;padding:12px 16px;margin:12px 0;border-radius:4px;font-size:14px}
+.insight strong{color:#d35400}
+.alert{background:#fdedec;border-left:4px solid #e74c3c;padding:12px 16px;margin:12px 0;border-radius:4px;font-size:14px}
+.alert strong{color:#c0392b}
+.success{background:#eafaf1;border-left:4px solid #27ae60;padding:12px 16px;margin:12px 0;border-radius:4px;font-size:14px}
+.action-list{list-style:none;padding:0}
+.action-list li{padding:10px 14px;margin:6px 0;border-radius:6px;border:1px solid #e8edf3;display:flex;align-items:flex-start;gap:10px}
+.action-list .tag{display:inline-block;padding:1px 8px;border-radius:4px;font-size:11px;font-weight:700;color:#fff;white-space:nowrap}
+.tag-p0{background:#e74c3c}
+.tag-p1{background:#e67e22}
+.tag-p2{background:#3498db}
+.footer{text-align:center;padding:30px;color:#888;font-size:13px}
+@media(max-width:768px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<div class="header">
+<h1>W24 周报深度分析报告</h1>
+<div class="meta">
+<span>店铺：奥莱店华南区城市</span>
+<span>广州一区 · 佛山佛罗伦萨小镇工厂2店</span>
+<span>周期：2026.06.08-06.14</span>
+<span>报告日期：2026.06.16</span>
+</div>
+</div>
+
+<div class="container">
+
+<!-- ==================== 总体结论 ==================== -->
+<div class="section">
+<div class="section-title">一、总体结论</div>
+<div class="section-body">
+<p style="font-size:15px;line-height:1.8">
+W24流水<strong>¥98,421</strong>，达成率<strong>86.79%</strong>，未达标（缺口¥14,981）。同比<strong>+22.50%</strong>，环比<strong>-9.33%</strong>。
+YTD达成<strong>136.42%</strong>，全年累计表现优秀。6月累计达成<strong>97.35%</strong>。
+</p>
+
+<div class="alert">
+<strong>核心矛盾：</strong>客流同比+34.56%但成交率仅18.04%（同比-5.22pp），引流有效但转化不足。大单能力回升是积极信号。
+</div>
+
+<div class="success">
+<strong>最大亮点：</strong>连带率4.48（同比+17.33%）、客单价¥544（同比+15.65%），鞋类同比+68.92%、鞋运动生活系列同比+138.28%。
+</div>
+</div>
+</div>
+
+<!-- ==================== KPI总览 ==================== -->
+<div class="section">
+<div class="section-title">二、KPI总览</div>
+<div class="section-body">
+
+<div class="sub-title">2.1 核心KPI指标</div>
+<div class="kpi-grid">
+<div class="kpi-card">
+<div class="label">流水达成率</div>
+<div class="value highlight">86.79%</div>
+<div class="sub">周目标¥113,402</div>
+</div>
+<div class="kpi-card">
+<div class="label">流水同比</div>
+<div class="value up">+22.50%</div>
+<div class="sub">环比 -9.33%</div>
+</div>
+<div class="kpi-card">
+<div class="label">成交率</div>
+<div class="value down">18.04%</div>
+<div class="sub">同比 -5.22pp</div>
+</div>
+<div class="kpi-card">
+<div class="label">日均客流</div>
+<div class="value">151人</div>
+<div class="sub">同比 +34.56%</div>
+</div>
+<div class="kpi-card">
+<div class="label">客单价</div>
+<div class="value up">¥544</div>
+<div class="sub">同比 +15.65%</div>
+</div>
+<div class="kpi-card">
+<div class="label">连带率</div>
+<div class="value up">4.48件</div>
+<div class="sub">同比 +17.33%</div>
+</div>
+<div class="kpi-card">
+<div class="label">件单价</div>
+<div class="value">¥121</div>
+<div class="sub">同比 -1.43%</div>
+</div>
+<div class="kpi-card">
+<div class="label">折扣率</div>
+<div class="value">43.16%</div>
+<div class="sub">同比 -0.93pp</div>
+</div>
+</div>
+
+<div class="sub-title">2.2 多周期对比</div>
+<table>
+<tr><th>周期</th><th>流水目标</th><th>实际流水</th><th>达成率</th><th>同比</th><th>环比</th></tr>
+<tr><td><strong>W24周</strong></td><td>¥113,402</td><td>¥98,421</td><td><strong>86.79%</strong></td><td>+22.50%</td><td>-9.33%</td></tr>
+<tr><td>6月月间</td><td>¥212,594</td><td>¥206,966</td><td><strong>97.35%</strong></td><td>-21.86%</td><td>-30.18%</td></tr>
+<tr><td>年间</td><td>¥3,314,532</td><td>¥4,521,608</td><td><strong>136.42%</strong></td><td>+297.89%</td><td>/</td></tr>
+<tr><td>区域</td><td>¥1,966,475</td><td>¥1,283,760</td><td><strong>65.28%</strong></td><td>-15.20%</td><td>-11.62%</td></tr>
+</table>
+
+<div class="sub-title">2.3 件单价/客单价/连带率</div>
+<table>
+<tr><th>指标</th><th>当期</th><th>同比</th><th>环比</th></tr>
+<tr><td>件单价</td><td>¥121.43</td><td><span class="badge badge-red">-1.43%</span></td><td><span class="badge badge-red">-7.95%</span></td></tr>
+<tr><td>客单价</td><td>¥544.23</td><td><span class="badge badge-green">+15.65%</span></td><td><span class="badge badge-green">+5.45%</span></td></tr>
+<tr><td>连带率</td><td>4.48件</td><td><span class="badge badge-green">+17.33%</span></td><td><span class="badge badge-green">+14.56%</span></td></tr>
+<tr><td>客单量</td><td>191笔</td><td><span class="badge badge-green">+4.37%</span></td><td><span class="badge badge-red">-11.57%</span></td></tr>
+<tr><td>折扣率</td><td>43.16%</td><td><span class="badge badge-green">-0.93pp</span></td><td><span class="badge badge-green">-0.93pp</span></td></tr>
+</table>
+</div>
+</div>
+
+<!-- ==================== 日别分析 ==================== -->
+<div class="section">
+<div class="section-title">三、日别分析</div>
+<div class="section-body">
+<table>
+<tr><th>日期</th><th>流水</th><th>达成率</th><th>成交率</th><th>客流</th><th>客单价</th><th>连带率</th></tr>
+<tr><td>周一</td><td>¥12,217</td><td><span class="badge badge-green">124.11%</span></td><td>15.58%</td><td>77</td><td>¥1,042</td><td><strong>7.67</strong></td></tr>
+<tr><td>周二</td><td>¥5,894</td><td><span class="badge badge-red">56.82%</span></td><td><span class="badge badge-red">12.04%</span></td><td>108</td><td>¥396</td><td>2.69</td></tr>
+<tr><td>周三</td><td>¥10,647</td><td>99.96%</td><td>23.46%</td><td>81</td><td>¥557</td><td>4.37</td></tr>
+<tr><td>周四</td><td>¥15,412</td><td><span class="badge badge-green">131.50%</span></td><td><span class="badge badge-green">22.56%</span></td><td>133</td><td>¥501</td><td>4.43</td></tr>
+<tr><td>周五</td><td>¥14,225</td><td>112.55%</td><td>21.58%</td><td>139</td><td>¥471</td><td>3.50</td></tr>
+<tr><td>周六</td><td>¥15,910</td><td><span class="badge badge-red">53.97%</span></td><td>16.14%</td><td>254</td><td>¥453</td><td>4.20</td></tr>
+<tr><td>周日</td><td>¥24,116</td><td>84.04%</td><td>17.23%</td><td>267</td><td>¥608</td><td>5.13</td></tr>
+</table>
+
+<div class="alert">
+<strong>P0问题：</strong>周二达成仅56.82%（成交率12.04%全周最低），周六目标¥29,479偏高（达成53.97%）。周六客流254全周第二高但目标设定导致达成率低。
+</div>
+
+<div class="insight">
+<strong>结构分析：</strong>平日（周一至四）流水¥44,170占44.88%，周末（周五至日）¥54,251占55.12%。周一长尾大单突出（连带率7.67）。
+</div>
+</div>
+</div>
+
+<!-- ==================== 品类分析 ==================== -->
+<div class="section">
+<div class="section-title">四、品类结构分析</div>
+<div class="section-body">
+
+<div class="sub-title">4.1 男女童</div>
+<table>
+<tr><th>品类</th><th>流水</th><th>占比</th><th>折扣</th><th>同比</th><th>环比</th></tr>
+<tr><td><strong>男（含中性）</strong></td><td>¥69,395</td><td><strong>70.51%</strong></td><td>0.427</td><td>+22.09%</td><td>-11.44%</td></tr>
+<tr><td>女</td><td>¥23,856</td><td>24.24%</td><td>0.448</td><td>+23.44%</td><td><span class="badge badge-green">+9.97%</span></td></tr>
+<tr><td>童</td><td>¥5,170</td><td>5.31%</td><td>0.386</td><td>/</td><td>/</td></tr>
+</table>
+
+<div class="sub-title">4.2 鞋服器配</div>
+<table>
+<tr><th>品类</th><th>流水</th><th>占比</th><th>同比</th><th>环比</th><th>可售周</th></tr>
+<tr><td><strong>鞋</strong></td><td>¥50,010</td><td><strong>50.81%</strong></td><td><span class="badge badge-green">+68.92%</span></td><td>-4.27%</td><td>27.33周</td></tr>
+<tr><td>服</td><td>¥39,754</td><td>40.39%</td><td><span class="badge badge-red">-14.68%</span></td><td>-14.73%</td><td>28.75周</td></tr>
+<tr><td>器配</td><td>¥8,537</td><td>8.67%</td><td><span class="badge badge-green">+106.06%</span></td><td>-11.85%</td><td>21.32周</td></tr>
+</table>
+
+<div class="sub-title">4.3 产品季</div>
+<table>
+<tr><th>产品季</th><th>流水</th><th>占比</th><th>折扣</th><th>库存占比</th><th>可售周</th></tr>
+<tr><td>2025Q4及以前（老品）</td><td>¥43,030</td><td><strong>44.18%</strong></td><td>0.352</td><td>45.89%</td><td>26.38周</td></tr>
+<tr><td>26年常青</td><td>¥34,309</td><td>35.22%</td><td>0.531</td><td>22.19%</td><td>21.41周</td></tr>
+<tr><td>2026Q2（当季）</td><td>¥10,700</td><td>10.98%</td><td>0.561</td><td>8.79%</td><td>28.71周</td></tr>
+<tr><td>2026Q1</td><td>¥8,773</td><td>9.01%</td><td>0.467</td><td>15.99%</td><td><span class="badge badge-red">53.05周</span></td></tr>
+</table>
+<div class="insight">
+<strong>关注：</strong>2026Q1库存占比15.99%但流水仅9.01%，可售周高达53周，需重点消化。
+</div>
+</div>
+</div>
+
+<!-- ==================== 服装系列分析 ==================== -->
+<div class="section">
+<div class="section-title">五、服装子品类分析</div>
+<div class="section-body">
+<table>
+<tr><th>系列</th><th>流水</th><th>占比</th><th>折扣</th><th>环比</th><th>同比</th><th>可售周</th></tr>
+<tr><td><strong>健身</strong></td><td>¥14,076</td><td><strong>35.41%</strong></td><td>54.0%</td><td>+1.72%</td><td>-4.02%</td><td>18.23周</td></tr>
+<tr><td>运动生活</td><td>¥8,197</td><td>20.62%</td><td>42.4%</td><td><span class="badge badge-red">-32.58%</span></td><td>-25.12%</td><td><span class="badge badge-red">34.57周</span></td></tr>
+<tr><td>其他</td><td>¥5,074</td><td>12.76%</td><td>43.6%</td><td>-32.45%</td><td>+178.44%</td><td>38.85周</td></tr>
+<tr><td>跑步</td><td>¥3,718</td><td>9.35%</td><td>48.5%</td><td>-22.54%</td><td>-29.34%</td><td>22.20周</td></tr>
+<tr><td>篮球</td><td>¥3,388</td><td>8.52%</td><td>36.2%</td><td>-14.29%</td><td>-58.95%</td><td>29.73周</td></tr>
+<tr><td>韦德</td><td>¥2,891</td><td>7.27%</td><td>32.8%</td><td>+28.66%</td><td>-26.80%</td><td>19.14周</td></tr>
+</table>
+<div class="alert">
+<strong>P0行动：</strong>运动生活服环比-32.58%，库存¥66.84万可售34.57周——需重点消化。
+</div>
+</div>
+</div>
+
+<!-- ==================== 鞋类系列分析 ==================== -->
+<div class="section">
+<div class="section-title">六、鞋类系列分析</div>
+<div class="section-body">
+<table>
+<tr><th>系列</th><th>流水</th><th>占比</th><th>折扣</th><th>环比</th><th>同比</th><th>可售周</th></tr>
+<tr><td><strong>运动生活</strong></td><td>¥23,912</td><td><strong>47.81%</strong></td><td>38.1%</td><td><span class="badge badge-green">+63.78%</span></td><td><span class="badge badge-green">+138.28%</span></td><td>12.94周</td></tr>
+<tr><td>跑步</td><td>¥18,472</td><td>36.94%</td><td>50.3%</td><td>-3.09%</td><td>+17.68%</td><td><span class="badge badge-red">41.75周</span></td></tr>
+<tr><td>篮球</td><td>¥3,017</td><td>6.03%</td><td>43.8%</td><td><span class="badge badge-red">-68.08%</span></td><td>+36.65%</td><td><span class="badge badge-red">60.27周</span></td></tr>
+<tr><td>韦德</td><td>¥672</td><td>1.34%</td><td>42.1%</td><td>-70.12%</td><td>-23.49%</td><td>32.94周</td></tr>
+</table>
+<div class="success">
+<strong>亮点：</strong>鞋运动生活同比+138.28%是整张报表最亮眼数据，库存12.94周健康流转，可继续加推。
+</div>
+<div class="alert">
+<strong>风险：</strong>跑步鞋库存¥153.38万（可售41.75周）、篮球鞋可售60.27周，库存压力大。
+</div>
+</div>
+</div>
+
+<!-- ==================== 人员销售 ==================== -->
+<div class="section">
+<div class="section-title">七、人员销售排行</div>
+<div class="section-body">
+<table>
+<tr><th>排名</th><th>姓名</th><th>W24销售</th><th>件数</th><th>件单价</th><th>客单价</th><th>连带率</th></tr>
+<tr><td><strong>1</strong></td><td><strong>练炼</strong></td><td><strong>¥17,046</strong></td><td>164</td><td>¥104</td><td><strong>¥387</strong></td><td><strong>3.73</strong></td></tr>
+<tr><td>2</td><td>朱江霞</td><td>¥14,831</td><td>118</td><td>¥126</td><td>¥280</td><td>2.23</td></tr>
+<tr><td>3</td><td>王北丽</td><td>¥14,411</td><td>119</td><td>¥121</td><td>¥277</td><td>2.29</td></tr>
+<tr><td>4</td><td>徐颖</td><td>¥14,171</td><td>116</td><td>¥122</td><td>¥262</td><td>2.15</td></tr>
+<tr><td>5</td><td>朱浩辉</td><td>¥13,979</td><td>126</td><td>¥111</td><td>¥233</td><td>2.10</td></tr>
+<tr><td>6</td><td>黄财明</td><td>¥13,319</td><td>106</td><td>¥126</td><td>¥226</td><td><span class="badge badge-red">1.80</span></td></tr>
+<tr><td>*</td><td>司徒耀辉</td><td>¥9,666</td><td>62</td><td>¥156</td><td><strong>¥1,208</strong></td><td><strong>7.75</strong></td></tr>
+</table>
+<div class="insight">
+<strong>关键洞察：</strong>练炼销售冠军（¥17,046）且连带率3.73，可作为大单技巧分享。黄财明连带率1.80最低，需重点辅导。司徒耀辉仅8单但客单价¥1,208属于精品单打法。
+</div>
+</div>
+</div>
+
+<!-- ==================== 库存分析 ==================== -->
+<div class="section">
+<div class="section-title">八、库存与断码分析</div>
+<div class="section-body">
+<table>
+<tr><th>指标</th><th>鞋</th><th>服</th><th>器配</th></tr>
+<tr><td>库存金额</td><td>¥322.78万</td><td>¥256.33万</td><td>¥44.00万</td></tr>
+<tr><td>库存占比</td><td>51.80%</td><td>41.14%</td><td>7.06%</td></tr>
+<tr><td>可售周（剔除团购）</td><td>27.33周</td><td>28.75周</td><td>21.32周</td></tr>
+<tr><td>SKU动销率</td><td>33.43%</td><td>36.80%</td><td>24.85%</td></tr>
+<tr><td>实际断码率</td><td>19.32%</td><td>24.80%</td><td>/</td></tr>
+</table>
+<div class="insight">
+总库存金额约<strong>¥623万</strong>。SKU动销率整体偏低（器配仅24.85%），服装实际断码率24.80%偏高。
+</div>
+</div>
+</div>
+
+<!-- ==================== 行动建议 ==================== -->
+<div class="section">
+<div class="section-title">九、行动建议</div>
+<div class="section-body">
+
+<div class="sub-title">P0 紧急</div>
+<ul class="action-list">
+<li><span class="tag tag-p0">P0</span> <strong>成交率攻坚战</strong>（18.04%→22%）：客流+34.56%但成交率-5.22pp，进店转化存在系统性问题。执行进店三句话话术+试穿率考核+周二低成交日专项挑战。</li>
+<li><span class="tag tag-p0">P0</span> <strong>周二突破计划</strong>：达成率56.82%、成交率12.04%全周最差。设"周二特惠日"选取3-5款库存深度商品做限时折扣，目标提升至80%+。</li>
+<li><span class="tag tag-p0">P0</span> <strong>周六目标复盘</strong>：目标¥29,479实际¥15,910（达成53.97%），与区经复核周六目标制定逻辑。</li>
+</ul>
+
+<div class="sub-title">P1 重要</div>
+<ul class="action-list">
+<li><span class="tag tag-p1">P1</span> <strong>运动生活服装消化</strong>：库存¥66.84万，可售周34.57周，环比-32.58%。筛选连续3周0动销SKU调出或降价清仓。</li>
+<li><span class="tag tag-p1">P1</span> <strong>跑步鞋库存监控</strong>：库存¥153.38万，可售41.75周，关注动销率变化。</li>
+<li><span class="tag tag-p1">P1</span> <strong>2026Q1库存消化</strong>：可售周53周，库存占比15.99%但流水仅9.01%，制定促销计划。</li>
+</ul>
+
+<div class="sub-title">P2 持续优化</div>
+<ul class="action-list">
+<li><span class="tag tag-p2">P2</span> <strong>练炼案例复制</strong>：连带率3.73、客单价¥387的销售技巧做团队内部分享。</li>
+<li><span class="tag tag-p2">P2</span> <strong>女装增长趋势</strong>：环比+9.97%呈增长，加大女装陈列与主推力度。</li>
+<li><span class="tag tag-p2">P2</span> <strong>6月冲刺</strong>：月间累计¥206,966（达成97.35%），剩余16天缺口¥5,628，按节奏可超额完成。</li>
+</ul>
+</div>
+</div>
+
+</div>
+
+<div class="footer">
+W24周报深度分析报告 | 奥莱店华南区城市 | 报告日期 2026.06.16
+</div>
+
+</body>
+</html>
