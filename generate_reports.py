@@ -119,7 +119,7 @@ def r1():
 <tr><td>6-7折</td><td>{dr_data.get("7","--")}</td><td>{dr_data.get("8","--")}</td></tr>
 <tr><td>7-8折</td><td>{dr_data.get("10","--")}</td><td>{dr_data.get("11","--")}</td></tr>
 <tr><td>8折以上</td><td>{dr_data.get("13","--")}</td><td>{dr_data.get("14","--")}</td></tr></table></div>
-<div class="cause"><b>产生原因：</b><br>1. 折扣率{pa(discount)}意味着平均约{4.5+discount/100*5:.1f}折出售；<br>2. {"顾客对常年打折形成预期" if discount>40 else "当前折扣水平在奥莱正常范围内"}。</div></div>
+<div class="cause"><b>产生原因：</b><br>1. 折扣率{pa(discount)}意味着平均约{(100-discount)/10:.1f}折出售；<br>2. {"顾客对常年打折形成预期" if discount>40 else "当前折扣水平在奥莱正常范围内"}。</div></div>
 
 <div class="problem-card"><span class="pnum">6</span><h3>新品表现分析</h3>
 <div class="data-box"><table><tr><th>季节</th><th>流水</th><th>折扣率</th><th>数量</th></tr>
@@ -296,7 +296,7 @@ def r3():
 
     txt += f'''
 
-7、折扣率：综合折扣率{pa(discount)}（同比{p(discount_yoy)}pp、环比{p(discount_mom)}pp），约{round(4+discount/100*5,1)}折出售。
+7、折扣率：综合折扣率{pa(discount)}（同比{p(discount_yoy)}pp、环比{p(discount_mom)}pp），约{round((100-discount)/10,1)}折出售。
 
 8、O2O：O2O流水{m(o2o)}（占比{pa(o2o_pct)}），PAD{m(pad)}，官网O2O{m(o2o_online)}。
 
