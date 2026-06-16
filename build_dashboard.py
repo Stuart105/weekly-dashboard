@@ -135,17 +135,21 @@ for rk in ['115','116','117','120']:
 # Seasonal new product
 seas_data = {}
 if '5' in seas:
-    r5 = seas['5']; r7s = seas.get('7',{}); r6s = seas.get('6',{})
-    r19s = seas.get('19',{}); r25s = seas.get('25',{})
+    # seas rows are stored as {'label': ..., 'data': {...}} — extract the data dict
+    r5d = seas['5'].get('data', {})
+    r7d = seas.get('7', {}).get('data', {}) if isinstance(seas.get('7'), dict) else {}
+    r6d = seas.get('6', {}).get('data', {}) if isinstance(seas.get('6'), dict) else {}
+    r19d = seas.get('19', {}).get('data', {}) if isinstance(seas.get('19'), dict) else {}
+    r25d = seas.get('25', {}).get('data', {}) if isinstance(seas.get('25'), dict) else {}
     for ck, lbl in [('4','2025Q4及以前(服)'),('6','2026Q1(服)'),('8','2026Q2(服)'),('10','2026Q3+(服)'),('13','26年常青(服)'),
                      ('15','2025Q4及以前(鞋)'),('18','2026Q1(鞋)'),('20','2026Q2(鞋)'),('22','2026Q3+(鞋)'),('25','26年常青(鞋)')]:
-        if ck in r5:
+        if ck in r5d:
             seas_data[lbl] = {
-                'f': float(r5.get(ck,0)),
-                'd': float(r7s.get(ck,0))*100 if ck in r7s else 0,
-                'q': int(float(r6s.get(ck,0))) if ck in r6s else 0,
-                'su': float(r19s.get(ck,0))*100 if ck in r19s else 0,
-                'sat': float(r25s.get(ck,0))*100 if ck in r25s else 0,
+                'f': float(r5d.get(ck,0)),
+                'd': float(r7d.get(ck,0))*100 if ck in r7d else 0,
+                'q': int(float(r6d.get(ck,0))) if ck in r6d else 0,
+                'su': float(r19d.get(ck,0))*100 if ck in r19d else 0,
+                'sat': float(r25d.get(ck,0))*100 if ck in r25d else 0,
             }
 
 # Member extraction
