@@ -446,7 +446,7 @@ function drawCateCharts() {
       plugins:{ title:{display:true,text:'产品类别 — 鞋 / 服 / 器配',font:{size:14}}, legend:{position:'bottom'} },
       scales:{ y:{ position:'left',ticks:{ callback:v=>'¥'+v.toLocaleString()} }, y1:{ position:'right',ticks:{ callback:v=>v.toFixed(0)+'%'},grid:{drawOnChartArea:false} } }
     }
-  }));
+  });
   // Chart 2: Gender categories (男/女/童)
   const genCats=['男','女','童'];
   const gFlows=genCats.map(c=>D.category[c]?.flow||0);
@@ -461,7 +461,7 @@ function drawCateCharts() {
       plugins:{ title:{display:true,text:'顾客性别 — 男 / 女 / 童',font:{size:14}}, legend:{position:'bottom'} },
       scales:{ y:{ position:'left',ticks:{ callback:v=>'¥'+v.toLocaleString()} }, y1:{ position:'right',ticks:{ callback:v=>v.toFixed(0)+'%'},grid:{drawOnChartArea:false} } }
     }
-  }));
+  });
 }
 
 
