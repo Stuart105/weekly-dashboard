@@ -120,8 +120,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 
 <!-- STICKY KPI STRIP - ROW 1 (10 cards) -->
 <div class="kpi-strip" id="kpiStrip1">
-  <div class="ki"><div class="kv">11.3万</div><div class="kl">周目标</div><div class="kc neutral">周度目标</div></div>
-  <div class="ki"><div class="kv">9.8万</div><div class="kl">达成金额</div><div class="kc up">+22.5%</div></div>
+  <div class="ki"><div class="kv">¥113,402</div><div class="kl">周目标</div><div class="kc neutral">周度目标</div></div>
+  <div class="ki"><div class="kv">¥98,421</div><div class="kl">达成金额</div><div class="kc up">+22.5%</div></div>
   <div class="ki"><div class="kv" style="color:#ef4444">86.8%</div><div class="kl">达成率</div><div class="kc down">未达标</div></div>
   <div class="ki"><div class="kv" style="color:#22c55e">+22.5%</div><div class="kl">流水同比</div><div class="kc up">同比去年</div></div>
   <div class="ki"><div class="kv" style="color:#22c55e">+22.5%</div><div class="kl">SSSG</div><div class="kc up">同店同比</div></div>
@@ -703,8 +703,8 @@ function buildKpiStrip(){
   const D=DATA, fmt=v=>v>=10000?((v/10000).toFixed(1)+'万'):('¥'+v.toFixed(0)), pc=v=>(v>0?'+':'')+v.toFixed(1)+'%', pa=v=>v.toFixed(1)+'%', cl=v=>v>=0?'up':'down', clA=v=>v>=100?'up':'down';
   // Row 1
   const h1=[];
-  h1.push('<div class="ki"><div class="kv">'+fmt(D.target)+'</div><div class="kl">周目标</div><div class="kc neutral">周度目标</div></div>');
-  h1.push('<div class="ki"><div class="kv">'+fmt(D.actual)+'</div><div class="kl">达成金额</div><div class="kc '+cl(D.yoy)+'">'+pc(D.yoy)+'</div></div>');
+  h1.push('<div class="ki"><div class="kv">¥'+D.target.toLocaleString()+'</div><div class="kl">周目标</div><div class="kc neutral">周度目标</div></div>');
+  h1.push('<div class="ki"><div class="kv">¥'+D.actual.toLocaleString()+'</div><div class="kl">达成金额</div><div class="kc '+cl(D.yoy)+'">'+pc(D.yoy)+'</div></div>');
   h1.push('<div class="ki"><div class="kv" style="color:'+(D.achieve>=100?'#22c55e':'#ef4444')+'">'+D.achieve.toFixed(1)+'%</div><div class="kl">达成率</div><div class="kc '+clA(D.achieve)+'">'+(D.achieve>=100?'超目标':'未达标')+'</div></div>');
   h1.push('<div class="ki"><div class="kv" style="color:'+(D.yoy<0?'#ef4444':'#22c55e')+'">'+pc(D.yoy)+'</div><div class="kl">流水同比</div><div class="kc '+cl(D.yoy)+'">同比去年</div></div>');
   h1.push('<div class="ki"><div class="kv" style="color:'+(D.sssg<0?'#ef4444':'#22c55e')+'">'+pc(D.sssg)+'</div><div class="kl">SSSG</div><div class="kc '+cl(D.sssg)+'">同店同比</div></div>');
