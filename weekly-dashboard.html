@@ -185,10 +185,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
   </div>
 
   <div id="tab-seas" class="data-tab" style="display:none">
-    <div class="seas-summary" style="display:flex;gap:20px;margin-bottom:12px;padding:10px 14px;background:#f8fafc;border-radius:8px;font-size:13px">
-      <span><b>服</b> 整体同比: <span style="color:#ef4444">-62.7%</span></span>
-      <span><b>鞋</b> 整体同比: <span style="color:#ef4444">-24.9%</span></span>
-    </div>
     <div class="grid2">
       <div class="chart-wrap"><canvas id="chartSeasFlow"></canvas></div>
       <div class="chart-wrap"><canvas id="chartSeasRate"></canvas></div>
@@ -353,8 +349,8 @@ function initTables() {
   document.getElementById('cateTable').innerHTML=ct;
 
   // Season tables — two modules: 服 seasons / 鞋 seasons (built in Python to avoid f-string brace issues)
-  document.getElementById('seasClothTable').innerHTML='<tr><td>流水</td><td>¥17,377</td><td>¥3,026</td><td>¥9,712</td><td>¥595</td><td>¥9,044</td></tr><tr><td>环比</td><td class="lo">-24.7%</td><td class="lo">-29.3%</td><td class="lo">-20.0%</td><td class="hi">+48.0%</td><td class="hi">+34.5%</td></tr><tr><td>SKU数</td><td>¥133</td><td>¥21</td><td>¥54</td><td>¥5</td><td>¥31</td></tr><tr><td>库存量</td><td>¥6,291</td><td>¥805</td><td>¥1,858</td><td>¥78</td><td>¥1,284</td></tr><tr><td>折扣率</td><td class="hi">+35.2%</td><td class="hi">+48.6%</td><td class="hi">+56.0%</td><td class="hi">+73.0%</td><td class="hi">+58.6%</td></tr><tr><td>动销率</td><td class="hi">+30.6%</td><td class="hi">+38.9%</td><td class="hi">+46.2%</td><td class="hi">+62.5%</td><td class="hi">+63.3%</td></tr>';
-  document.getElementById('seasShoeTable').innerHTML='<tr><td>流水</td><td>¥22,243</td><td>¥5,435</td><td>¥554</td><td>—</td><td>¥21,778</td></tr><tr><td>环比</td><td class="hi">+39.0%</td><td class="lo">-71.5%</td><td class="lo">-78.7%</td><td>—</td><td class="hi">+63.3%</td></tr><tr><td>SKU数</td><td>¥43</td><td>¥27</td><td>¥3</td><td>—</td><td>¥40</td></tr><tr><td>库存量</td><td>¥2,219</td><td>¥1,478</td><td>¥237</td><td>—</td><td>¥2,116</td></tr><tr><td>折扣率</td><td class="hi">+34.3%</td><td class="hi">+45.8%</td><td class="hi">+61.7%</td><td>—</td><td class="hi">+53.7%</td></tr><tr><td>动销率</td><td class="hi">+27.7%</td><td class="hi">+31.0%</td><td class="hi">+18.8%</td><td>—</td><td class="hi">+50.0%</td></tr>';
+  document.getElementById('seasClothTable').innerHTML='<tr><td>流水</td><td>¥17,377</td><td>¥3,026</td><td>¥9,712</td><td>¥595</td><td>¥9,044</td></tr><tr><td>环比</td><td class="lo">-24.7%</td><td class="lo">-29.3%</td><td class="lo">-20.0%</td><td class="hi">+48.0%</td><td class="hi">+34.5%</td></tr><tr><td>SKU数</td><td>133</td><td>21</td><td>54</td><td>5</td><td>31</td></tr><tr><td>库存量</td><td>6,291</td><td>805</td><td>1,858</td><td>78</td><td>1,284</td></tr><tr><td>折扣率</td><td class="hi">+35.2%</td><td class="hi">+48.6%</td><td class="hi">+56.0%</td><td class="hi">+73.0%</td><td class="hi">+58.6%</td></tr><tr><td>动销率</td><td class="hi">+30.6%</td><td class="hi">+38.9%</td><td class="hi">+46.2%</td><td class="hi">+62.5%</td><td class="hi">+63.3%</td></tr>';
+  document.getElementById('seasShoeTable').innerHTML='<tr><td>流水</td><td>¥22,243</td><td>¥5,435</td><td>¥554</td><td>—</td><td>¥21,778</td></tr><tr><td>环比</td><td class="hi">+39.0%</td><td class="lo">-71.5%</td><td class="lo">-78.7%</td><td>—</td><td class="hi">+63.3%</td></tr><tr><td>SKU数</td><td>43</td><td>27</td><td>3</td><td>—</td><td>40</td></tr><tr><td>库存量</td><td>2,219</td><td>1,478</td><td>237</td><td>—</td><td>2,116</td></tr><tr><td>折扣率</td><td class="hi">+34.3%</td><td class="hi">+45.8%</td><td class="hi">+61.7%</td><td>—</td><td class="hi">+53.7%</td></tr><tr><td>动销率</td><td class="hi">+27.7%</td><td class="hi">+31.0%</td><td class="hi">+18.8%</td><td>—</td><td class="hi">+50.0%</td></tr>';
 
   // Sub tables
   let sc=''; D.sub_ps.filter(r=>!r.isAcc).forEach(r=>{ sc+='<tr><td>'+r.n+'</td><td>¥'+r.f.toLocaleString()+'</td><td>'+(r.d||0).toFixed(2)+'%</td></tr>'; });
@@ -486,18 +482,22 @@ function drawSeasCharts() {
   const seasLabels=['25Q4旧品','26Q1','26Q2','26Q3+','常青'];
   const cKeys=['2025Q4及以前(服)','2026Q1(服)','2026Q2(服)','2026Q3+(服)','26年常青(服)'];
   const sKeys=['2025Q4及以前(鞋)','2026Q1(鞋)','2026Q2(鞋)','2026Q3+(鞋)','26年常青(鞋)'];
-  // Flow comparison
+  // Flow + 环比 trend comparison
   const cFlows=cKeys.map(k=>D.seas[k]?D.seas[k].f:0);
   const sFlows=sKeys.map(k=>D.seas[k]?D.seas[k].f:0);
+  const cMoms=cKeys.map(k=>D.seas[k]?D.seas[k].mom:null);
+  const sMoms=sKeys.map(k=>D.seas[k]?D.seas[k].mom:null);
   destroyChart('chartSeasFlow');
   chartInstances.chartSeasFlow = new Chart(document.getElementById('chartSeasFlow'),{
     type:'bar', data:{ labels:seasLabels, datasets:[
-      { label:'服流水', data:cFlows, backgroundColor:colors.blueBg, borderColor:colors.blue, borderWidth:1.5, borderRadius:4 },
-      { label:'鞋流水', data:sFlows, backgroundColor:colors.redBg, borderColor:colors.red, borderWidth:1.5, borderRadius:4 }
+      { label:'服流水', data:cFlows, backgroundColor:colors.blueBg, borderColor:colors.blue, borderWidth:1.5, borderRadius:4, yAxisID:'y' },
+      { label:'鞋流水', data:sFlows, backgroundColor:colors.redBg, borderColor:colors.red, borderWidth:1.5, borderRadius:4, yAxisID:'y' },
+      { label:'服环比', data:cMoms, type:'line', borderColor:colors.blue, backgroundColor:'transparent', pointRadius:5, pointBackgroundColor:colors.blue, borderDash:[5,3], yAxisID:'y1', tension:0.3 },
+      { label:'鞋环比', data:sMoms, type:'line', borderColor:colors.red, backgroundColor:'transparent', pointRadius:5, pointBackgroundColor:colors.red, borderDash:[5,3], yAxisID:'y1', tension:0.3 }
     ]},
     options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ title:{display:true,text:'服 vs 鞋 各季节流水对比',font:{size:14}}, legend:{position:'bottom'} },
-      scales:{ y:{ ticks:{ callback:v=>'¥'+v.toLocaleString()} } }
+      plugins:{ title:{display:true,text:'各季节流水 & 环比趋势',font:{size:14}}, legend:{position:'bottom'} },
+      scales:{ y:{ position:'left',ticks:{ callback:v=>'¥'+v.toLocaleString()} }, y1:{ position:'right',ticks:{ callback:v=>v.toFixed(0)+'%'},grid:{drawOnChartArea:false} } }
     }
   });
   // Stock qty comparison

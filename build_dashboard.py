@@ -199,22 +199,24 @@ if '5' in seas:
             }
 
 # Build season comparison HTML tables (服 vs 鞋, seasons as columns)
-_seas_metrics = [('流水','f',False),('环比','mom',True),('SKU数','sku',False),('库存量','stock_qty',False),('折扣率','d',True),('动销率','su',True)]
+# type: 'money' → ¥前缀 | 'pct' → %后缀+红绿色 | 'num' → 纯数字
+_seas_metrics = [('流水','f','money'),('环比','mom','pct'),('SKU数','sku','num'),('库存量','stock_qty','num'),('折扣率','d','pct'),('动销率','su','pct')]
 _seas_keys = [('2025Q4及以前(服)','2025Q4及以前(鞋)'),('2026Q1(服)','2026Q1(鞋)'),('2026Q2(服)','2026Q2(鞋)'),('2026Q3+(服)','2026Q3+(鞋)'),('26年常青(服)','26年常青(鞋)')]
-def _sfmt(v, pct):
+def _sfmt(v, typ):
     if v is None: return '—', ''
-    if pct: return f'{v:+.1f}%' if v>0 else f'{v:.1f}%', f' class="{"hi" if v>0 else "lo"}"'
-    return f'¥{v:,.0f}', ''
+    if typ == 'pct': return f'{v:+.1f}%' if v>0 else f'{v:.1f}%', f' class="{"hi" if v>0 else "lo"}"'
+    if typ == 'money': return f'¥{v:,.0f}', ''
+    return f'{v:,.0f}', ''  # num type: plain number
 clothing_seas_html = ''
 shoe_seas_html = ''
-for nm, fk, is_pct in _seas_metrics:
+for nm, fk, typ in _seas_metrics:
     c_row = f'<tr><td>{nm}</td>'
     s_row = f'<tr><td>{nm}</td>'
     for ck, sk in _seas_keys:
         cv = seas_data.get(ck, {}).get(fk) if ck in seas_data else None
         sv = seas_data.get(sk, {}).get(fk) if sk in seas_data else None
-        ctxt, ccls = _sfmt(cv, is_pct)
-        stxt, scls = _sfmt(sv, is_pct)
+        ctxt, ccls = _sfmt(cv, typ)
+        stxt, scls = _sfmt(sv, typ)
         c_row += f'<td{ccls}>{ctxt}</td>'
         s_row += f'<td{scls}>{stxt}</td>'
     clothing_seas_html += c_row + '</tr>'
@@ -693,10 +695,6 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
   </div>
 
   <div id="tab-seas" class="data-tab" style="display:none">
-    <div class="seas-summary" style="display:flex;gap:20px;margin-bottom:12px;padding:10px 14px;background:#f8fafc;border-radius:8px;font-size:13px">
-      <span><b>服</b> 整体同比: <span style="color:{'#ef4444' if seas_meta.get('cloth_yoy',0)<0 else '#22c55e'}">{pct(seas_meta.get('cloth_yoy',0),1)}</span></span>
-      <span><b>鞋</b> 整体同比: <span style="color:{'#ef4444' if seas_meta.get('shoe_yoy',0)<0 else '#22c55e'}">{pct(seas_meta.get('shoe_yoy',0),1)}</span></span>
-    </div>
     <div class="grid2">
       <div class="chart-wrap"><canvas id="chartSeasFlow"></canvas></div>
       <div class="chart-wrap"><canvas id="chartSeasRate"></canvas></div>
@@ -994,18 +992,22 @@ function drawSeasCharts() {{
   const seasLabels=['25Q4旧品','26Q1','26Q2','26Q3+','常青'];
   const cKeys=['2025Q4及以前(服)','2026Q1(服)','2026Q2(服)','2026Q3+(服)','26年常青(服)'];
   const sKeys=['2025Q4及以前(鞋)','2026Q1(鞋)','2026Q2(鞋)','2026Q3+(鞋)','26年常青(鞋)'];
-  // Flow comparison
+  // Flow + 环比 trend comparison
   const cFlows=cKeys.map(k=>D.seas[k]?D.seas[k].f:0);
   const sFlows=sKeys.map(k=>D.seas[k]?D.seas[k].f:0);
+  const cMoms=cKeys.map(k=>D.seas[k]?D.seas[k].mom:null);
+  const sMoms=sKeys.map(k=>D.seas[k]?D.seas[k].mom:null);
   destroyChart('chartSeasFlow');
   chartInstances.chartSeasFlow = new Chart(document.getElementById('chartSeasFlow'),{{
     type:'bar', data:{{ labels:seasLabels, datasets:[
-      {{ label:'服流水', data:cFlows, backgroundColor:colors.blueBg, borderColor:colors.blue, borderWidth:1.5, borderRadius:4 }},
-      {{ label:'鞋流水', data:sFlows, backgroundColor:colors.redBg, borderColor:colors.red, borderWidth:1.5, borderRadius:4 }}
+      {{ label:'服流水', data:cFlows, backgroundColor:colors.blueBg, borderColor:colors.blue, borderWidth:1.5, borderRadius:4, yAxisID:'y' }},
+      {{ label:'鞋流水', data:sFlows, backgroundColor:colors.redBg, borderColor:colors.red, borderWidth:1.5, borderRadius:4, yAxisID:'y' }},
+      {{ label:'服环比', data:cMoms, type:'line', borderColor:colors.blue, backgroundColor:'transparent', pointRadius:5, pointBackgroundColor:colors.blue, borderDash:[5,3], yAxisID:'y1', tension:0.3 }},
+      {{ label:'鞋环比', data:sMoms, type:'line', borderColor:colors.red, backgroundColor:'transparent', pointRadius:5, pointBackgroundColor:colors.red, borderDash:[5,3], yAxisID:'y1', tension:0.3 }}
     ]}},
     options:{{ responsive:true, maintainAspectRatio:false,
-      plugins:{{ title:{{display:true,text:'服 vs 鞋 各季节流水对比',font:{{size:14}}}}, legend:{{position:'bottom'}} }},
-      scales:{{ y:{{ ticks:{{ callback:v=>'¥'+v.toLocaleString()}} }} }}
+      plugins:{{ title:{{display:true,text:'各季节流水 & 环比趋势',font:{{size:14}}}}, legend:{{position:'bottom'}} }},
+      scales:{{ y:{{ position:'left',ticks:{{ callback:v=>'¥'+v.toLocaleString()}} }}, y1:{{ position:'right',ticks:{{ callback:v=>v.toFixed(0)+'%'}},grid:{{drawOnChartArea:false}} }} }}
     }}
   }});
   // Stock qty comparison
