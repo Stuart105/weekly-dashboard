@@ -465,9 +465,8 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
 .btn-primary{{background:var(--blue);color:white}}
 .btn-primary:hover{{background:#2563eb}}
 
-/* Sticky KPI — fixed square blocks, two rows */
+/* KPI — fixed square blocks, two rows */
 .kpi-strip{{border-radius:12px;padding:8px 10px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:10px;border:1px solid var(--border);display:flex;flex-wrap:wrap;gap:8px;justify-content:center}}
-.kpi-strip.kpi-sticky{{position:sticky;top:72px;z-index:99;background:var(--card)}}
 .kpi-strip .ki{{flex:0 0 106px;height:106px;text-align:center;padding:6px 4px;border-radius:8px;background:#f8fafc;display:flex;flex-direction:column;justify-content:center;align-items:center;overflow:hidden}}
 .kpi-strip .ki .kv{{font-size:18px;font-weight:800;line-height:1.2}}
 .kpi-strip .ki .kl{{font-size:10px;color:var(--sub);margin-top:2px;line-height:1.2}}
@@ -559,8 +558,8 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
   </div>
 </div>
 
-<!-- STICKY KPI STRIP - ROW 1 (10 cards) -->
-<div class="kpi-strip kpi-sticky" id="kpiStrip1">
+<!-- KPI STRIP - ROW 1 (10 cards) -->
+<div class="kpi-strip" id="kpiStrip1">
   <div class="ki"><div class="kv">¥{target_v:,.0f}</div><div class="kl">周目标</div><div class="kc neutral">周度目标</div></div>
   <div class="ki"><div class="kv">¥{actual_v:,.0f}</div><div class="kl">达成金额</div><div class="kc {'up' if yoy_v>0 else 'down'}">{pct(yoy_v,1)}</div></div>
   <div class="ki"><div class="kv" style="color:{'#22c55e' if achieve_v>=100 else '#ef4444'}">{pa(achieve_v,1)}</div><div class="kl">达成率</div><div class="kc {'up' if achieve_v>=100 else 'down'}">{'超目标' if achieve_v>=100 else '未达标'}</div></div>
