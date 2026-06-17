@@ -204,11 +204,12 @@ if '5' in seas:
 
 # Build season comparison HTML tables (服 vs 鞋, seasons as columns)
 # type: 'money' → ¥前缀 | 'pct' → %后缀+红绿色 | 'num' → 纯数字
-_seas_metrics = [('流水','f','money'),('环比','mom','pct'),('SKU数','sku','num'),('库存量','stock_qty','num'),('折扣率','d','pct'),('动销率','su','pct')]
+_seas_metrics = [('流水','f','money'),('环比','mom','pct'),('SKU数','sku','num'),('库存量','stock_qty','num'),('折扣率','d','pct_abs'),('动销率','su','pct_abs')]
 _seas_keys = [('2025Q4及以前(服)','2025Q4及以前(鞋)'),('2026Q1(服)','2026Q1(鞋)'),('2026Q2(服)','2026Q2(鞋)'),('2026Q3+(服)','2026Q3+(鞋)'),('26年常青(服)','26年常青(鞋)')]
 def _sfmt(v, typ):
     if v is None: return '—', ''
     if typ == 'pct': return f'{v:+.1f}%' if v>0 else f'{v:.1f}%', f' class="{"hi" if v>0 else "lo"}"'
+    if typ == 'pct_abs': return f'{v:.1f}%', ''  # absolute % no sign
     if typ == 'money': return f'¥{v:,.0f}', ''
     return f'{v:,.0f}', ''  # num type: plain number
 clothing_seas_html = ''
@@ -225,6 +226,60 @@ for nm, fk, typ in _seas_metrics:
         s_row += f'<td{scls}>{stxt}</td>'
     clothing_seas_html += c_row + '</tr>'
     shoe_seas_html += s_row + '</tr>'
+
+# ───────── Mid-category data (男服/女服/男鞋/女鞋) ─────────
+# Each: {name, section_start_row, col_map: {season_label: col_key}}
+_mid_cats = [
+    ('男服', 28, [('25Q4','4'),('26Q1','6'),('26Q2','8'),('26Q3+','10'),('常青','13')]),
+    ('女服', 28, [('25Q4','15'),('26Q1','18'),('26Q2','20'),('26Q3+','22'),('常青','25')]),
+    ('男鞋', 55, [('25Q4','4'),('26Q1','6'),('26Q2','8'),('26Q3+','10'),('常青','13')]),
+    ('女鞋', 55, [('25Q4','15'),('26Q1','18'),('26Q2','20'),('26Q3+','22'),('常青','25')]),
+]
+_mid_metrics = [('流水','f','money'),('环比','mom','pct'),('SKU数','sku','num'),('库存量','stock_qty','num'),('折扣率','d','pct_abs'),('动销率','su','pct_abs')]
+# Metric row mapping: {field: (section2_row, section3_row)}
+_mid_row_map = {'f':(32,59), 'mom':(36,63), 'sku':(43,70), 'stock_qty':(48,75), 'd':(34,61), 'su':(46,73)}
+
+mid_data = {}  # {name: {season_label: {f, mom, sku, stock_qty, d, su}}}
+mid_html = {}  # {name: html_table_string}
+for mname, base_row, season_cols in _mid_cats:
+    is_shoe = base_row >= 55
+    mcat_data = {}
+    for slab, ck in season_cols:
+        mentry = {}
+        for field, (r2, r3) in _mid_row_map.items():
+            rk = str(r3 if is_shoe else r2)
+            if rk in seas:
+                v = seas[rk].get('data', {}).get(ck)
+                if v is not None:
+                    if field in ('mom', 'd', 'su'):
+                        mentry[field] = float(v) * 100
+                    elif field in ('sku', 'stock_qty'):
+                        mentry[field] = int(float(v))
+                    else:
+                        mentry[field] = float(v)
+        if mentry.get('f', 0) > 0:  # only add if has flow
+            mcat_data[slab] = mentry
+    mid_data[mname] = mcat_data
+    # Build HTML table
+    tbl = ''
+    for nm, fk, typ in _mid_metrics:
+        tbl += f'<tr><td>{nm}</td>'
+        for slab, _ in season_cols:
+            v = mcat_data.get(slab, {}).get(fk)
+            if v is not None:
+                if typ == 'money':
+                    tbl += f'<td>¥{v:,.0f}</td>'
+                elif typ == 'pct':  # change % (环比) with sign
+                    cls = ' class="hi"' if v > 0 else ' class="lo"'
+                    tbl += f'<td{cls}>{v:+.1f}%</td>'
+                elif typ == 'pct_abs':  # absolute % (折扣率, 动销率) no sign
+                    tbl += f'<td>{v:.1f}%</td>'
+                else:
+                    tbl += f'<td>{v:,.0f}</td>'
+            else:
+                tbl += '<td>—</td>'
+        tbl += '</tr>'
+    mid_html[mname] = tbl
 
 # Member extraction
 member_rows = []
@@ -661,6 +716,7 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
     <button class="tab" onclick="switchDataTab('matrix')">KPI矩阵</button>
     <button class="tab" onclick="switchDataTab('cate')">品类分析</button>
     <button class="tab" onclick="switchDataTab('seas')">新品季节</button>
+    <button class="tab" onclick="switchDataTab('mid')">中类分析</button>
     <button class="tab" onclick="switchDataTab('sub')">子品类</button>
   </div>
 
@@ -716,6 +772,42 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
         <table class="tbl" style="width:100%">
           <thead><tr><th>指标</th><th>25Q4旧品</th><th>26Q1</th><th>26Q2</th><th>26Q3+</th><th>26常青</th></tr></thead>
           <tbody id="seasShoeTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── MID-CATEGORY TAB ─── -->
+  <div id="tab-mid" class="data-tab" style="display:none">
+    <div class="grid2" style="margin-bottom:14px;gap:16px">
+      <div>
+        <h4 style="font-size:14px;margin-bottom:8px;color:var(--blue)">👔 男服 季节对比</h4>
+        <table class="tbl" style="width:100%">
+          <thead><tr><th>指标</th><th>25Q4</th><th>26Q1</th><th>26Q2</th><th>26Q3+</th><th>常青</th></tr></thead>
+          <tbody>{mid_html.get('男服','')}</tbody>
+        </table>
+      </div>
+      <div>
+        <h4 style="font-size:14px;margin-bottom:8px;color:var(--purple)">👗 女服 季节对比</h4>
+        <table class="tbl" style="width:100%">
+          <thead><tr><th>指标</th><th>25Q4</th><th>26Q1</th><th>26Q2</th><th>26Q3+</th><th>常青</th></tr></thead>
+          <tbody>{mid_html.get('女服','')}</tbody>
+        </table>
+      </div>
+    </div>
+    <div class="grid2" style="gap:16px">
+      <div>
+        <h4 style="font-size:14px;margin-bottom:8px;color:var(--blue)">👞 男鞋 季节对比</h4>
+        <table class="tbl" style="width:100%">
+          <thead><tr><th>指标</th><th>25Q4</th><th>26Q1</th><th>26Q2</th><th>26Q3+</th><th>常青</th></tr></thead>
+          <tbody>{mid_html.get('男鞋','')}</tbody>
+        </table>
+      </div>
+      <div>
+        <h4 style="font-size:14px;margin-bottom:8px;color:var(--purple)">👠 女鞋 季节对比</h4>
+        <table class="tbl" style="width:100%">
+          <thead><tr><th>指标</th><th>25Q4</th><th>26Q1</th><th>26Q2</th><th>26Q3+</th><th>常青</th></tr></thead>
+          <tbody>{mid_html.get('女鞋','')}</tbody>
         </table>
       </div>
     </div>
