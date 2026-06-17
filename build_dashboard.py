@@ -181,6 +181,7 @@ if '5' in seas:
     r21d = seas.get('21', {}).get('data', {}) if isinstance(seas.get('21'), dict) else {}
     r11d = seas.get('11', {}).get('data', {}) if isinstance(seas.get('11'), dict) else {}
     r13d = seas.get('13', {}).get('data', {}) if isinstance(seas.get('13'), dict) else {}  # 流水占比
+    r23d = seas.get('23', {}).get('data', {}) if isinstance(seas.get('23'), dict) else {}  # 库存占比
     # Overall YoY for 服 and 鞋 (row 11 col 4=服, col 15=鞋)
     seas_meta['cloth_yoy'] = float(r11d.get('4', 0))*100 if '4' in r11d else 0
     seas_meta['shoe_yoy'] = float(r11d.get('15', 0))*100 if '15' in r11d else 0
@@ -198,6 +199,7 @@ if '5' in seas:
                 'sku': int(float(r16d.get(ck,0))) if ck in r16d else 0,
                 'stock_qty': int(float(r21d.get(ck,0))) if ck in r21d else 0,
                 'fs': float(r13d.get(ck,0))*100 if ck in r13d else 0,  # 流水占比%
+                'stk_share': float(r23d.get(ck,0))*100 if ck in r23d else 0,  # 库存占比%
             }
 
 # Build season comparison HTML tables (服 vs 鞋, seasons as columns)
@@ -1012,22 +1014,22 @@ function drawSeasCharts() {{
       scales:{{ y:{{ position:'left',ticks:{{ callback:v=>'¥'+v.toLocaleString()}} }}, y1:{{ position:'right',ticks:{{ callback:v=>v.toFixed(0)+'%'}},grid:{{drawOnChartArea:false}} }} }}
     }}
   }});
-  // Stock qty + 流水占比 trend comparison
-  const cStocks=cKeys.map(k=>D.seas[k]?D.seas[k].stock_qty:0);
-  const sStocks=sKeys.map(k=>D.seas[k]?D.seas[k].stock_qty:0);
+  // 流水占比 vs 库存占比 trend comparison
   const cFShares=cKeys.map(k=>D.seas[k]?D.seas[k].fs:0);
   const sFShares=sKeys.map(k=>D.seas[k]?D.seas[k].fs:0);
+  const cStkShares=cKeys.map(k=>D.seas[k]?D.seas[k].stk_share:0);
+  const sStkShares=sKeys.map(k=>D.seas[k]?D.seas[k].stk_share:0);
   destroyChart('chartSeasRate');
   chartInstances.chartSeasRate = new Chart(document.getElementById('chartSeasRate'),{{
-    type:'bar', data:{{ labels:seasLabels, datasets:[
-      {{ label:'服库存', data:cStocks, backgroundColor:colors.blueBg, borderColor:colors.blue, borderWidth:1.5, borderRadius:4, yAxisID:'y' }},
-      {{ label:'鞋库存', data:sStocks, backgroundColor:colors.redBg, borderColor:colors.red, borderWidth:1.5, borderRadius:4, yAxisID:'y' }},
-      {{ label:'服流水占比', data:cFShares, type:'line', borderColor:colors.blue, backgroundColor:'transparent', pointRadius:5, pointBackgroundColor:colors.blue, borderDash:[5,3], yAxisID:'y1', tension:0.3 }},
-      {{ label:'鞋流水占比', data:sFShares, type:'line', borderColor:colors.red, backgroundColor:'transparent', pointRadius:5, pointBackgroundColor:colors.red, borderDash:[5,3], yAxisID:'y1', tension:0.3 }}
+    type:'line', data:{{ labels:seasLabels, datasets:[
+      {{ label:'服流水占比', data:cFShares, borderColor:colors.blue, backgroundColor:'transparent', pointRadius:5, pointBackgroundColor:colors.blue, tension:0.3, borderWidth:2.5 }},
+      {{ label:'鞋流水占比', data:sFShares, borderColor:colors.red, backgroundColor:'transparent', pointRadius:5, pointBackgroundColor:colors.red, tension:0.3, borderWidth:2.5 }},
+      {{ label:'服库存占比', data:cStkShares, borderColor:colors.blue, backgroundColor:'transparent', pointRadius:4, pointStyle:'rect', borderDash:[5,3], tension:0.3, borderWidth:2 }},
+      {{ label:'鞋库存占比', data:sStkShares, borderColor:colors.red, backgroundColor:'transparent', pointRadius:4, pointStyle:'rect', borderDash:[5,3], tension:0.3, borderWidth:2 }}
     ]}},
     options:{{ responsive:true, maintainAspectRatio:false,
-      plugins:{{ title:{{display:true,text:'各季节库存 & 流水占比趋势',font:{{size:14}}}}, legend:{{position:'bottom'}} }},
-      scales:{{ y:{{ position:'left',ticks:{{ callback:v=>v.toLocaleString()}} }}, y1:{{ position:'right',ticks:{{ callback:v=>v.toFixed(1)+'%'}},grid:{{drawOnChartArea:false}} }} }}
+      plugins:{{ title:{{display:true,text:'各季节 流水占比 vs 库存占比',font:{{size:14}}}}, legend:{{position:'bottom'}} }},
+      scales:{{ y:{{ ticks:{{ callback:v=>v.toFixed(1)+'%'}}, max:80 }} }}
     }}
   }});
 }}
