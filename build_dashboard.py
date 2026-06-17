@@ -260,25 +260,30 @@ for mname, base_row, season_cols in _mid_cats:
         if mentry.get('f', 0) > 0:  # only add if has flow
             mcat_data[slab] = mentry
     mid_data[mname] = mcat_data
-    # Build HTML table
-    tbl = ''
+    # Calculate aggregate: sum for 流水/SKU/库存, avg for 环比/折扣率/动销率
+    entries = [e for e in mcat_data.values() if e.get('f', 0) > 0]
+    if entries:
+        agg = {}
+        for fk in ['f', 'sku', 'stock_qty']:
+            agg[fk] = sum(e.get(fk, 0) for e in entries)
+        for fk in ['mom', 'd', 'su']:
+            vals = [e.get(fk, 0) for e in entries if e.get(fk) is not None]
+            agg[fk] = sum(vals) / len(vals) if vals else 0
+    else:
+        agg = {fk: 0 for fk in ['f','sku','stock_qty','mom','d','su']}
+    # Build HTML table — single column showing aggregate
+    tbl = '<tr><th>指标</th><th>合计</th></tr>'
     for nm, fk, typ in _mid_metrics:
-        tbl += f'<tr><td>{nm}</td>'
-        for slab, _ in season_cols:
-            v = mcat_data.get(slab, {}).get(fk)
-            if v is not None:
-                if typ == 'money':
-                    tbl += f'<td>¥{v:,.0f}</td>'
-                elif typ == 'pct':  # change % (环比) with sign
-                    cls = ' class="hi"' if v > 0 else ' class="lo"'
-                    tbl += f'<td{cls}>{v:+.1f}%</td>'
-                elif typ == 'pct_abs':  # absolute % (折扣率, 动销率) no sign
-                    tbl += f'<td>{v:.1f}%</td>'
-                else:
-                    tbl += f'<td>{v:,.0f}</td>'
-            else:
-                tbl += '<td>—</td>'
-        tbl += '</tr>'
+        v = agg.get(fk, 0)
+        if typ == 'money':
+            tbl += f'<tr><td>{nm}</td><td>¥{v:,.0f}</td></tr>'
+        elif typ == 'pct':
+            cls = ' class="hi"' if v > 0 else ' class="lo"'
+            tbl += f'<tr><td>{nm}</td><td{cls}>{v:+.1f}%</td></tr>'
+        elif typ == 'pct_abs':
+            tbl += f'<tr><td>{nm}</td><td>{v:.1f}%</td></tr>'
+        else:
+            tbl += f'<tr><td>{nm}</td><td>{v:,.0f}</td></tr>'
     mid_html[mname] = tbl
 
 # Member extraction
@@ -781,32 +786,28 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
   <div id="tab-mid" class="data-tab" style="display:none">
     <div class="grid2" style="margin-bottom:14px;gap:16px">
       <div>
-        <h4 style="font-size:14px;margin-bottom:8px;color:var(--blue)">👔 男服 季节对比</h4>
+        <h4 style="font-size:14px;margin-bottom:8px;color:var(--blue)">👔 男服 合计</h4>
         <table class="tbl" style="width:100%">
-          <thead><tr><th>指标</th><th>25Q4</th><th>26Q1</th><th>26Q2</th><th>26Q3+</th><th>常青</th></tr></thead>
           <tbody>{mid_html.get('男服','')}</tbody>
         </table>
       </div>
       <div>
-        <h4 style="font-size:14px;margin-bottom:8px;color:var(--purple)">👗 女服 季节对比</h4>
+        <h4 style="font-size:14px;margin-bottom:8px;color:var(--purple)">👗 女服 合计</h4>
         <table class="tbl" style="width:100%">
-          <thead><tr><th>指标</th><th>25Q4</th><th>26Q1</th><th>26Q2</th><th>26Q3+</th><th>常青</th></tr></thead>
           <tbody>{mid_html.get('女服','')}</tbody>
         </table>
       </div>
     </div>
     <div class="grid2" style="gap:16px">
       <div>
-        <h4 style="font-size:14px;margin-bottom:8px;color:var(--blue)">👞 男鞋 季节对比</h4>
+        <h4 style="font-size:14px;margin-bottom:8px;color:var(--blue)">👞 男鞋 合计</h4>
         <table class="tbl" style="width:100%">
-          <thead><tr><th>指标</th><th>25Q4</th><th>26Q1</th><th>26Q2</th><th>26Q3+</th><th>常青</th></tr></thead>
           <tbody>{mid_html.get('男鞋','')}</tbody>
         </table>
       </div>
       <div>
-        <h4 style="font-size:14px;margin-bottom:8px;color:var(--purple)">👠 女鞋 季节对比</h4>
+        <h4 style="font-size:14px;margin-bottom:8px;color:var(--purple)">👠 女鞋 合计</h4>
         <table class="tbl" style="width:100%">
-          <thead><tr><th>指标</th><th>25Q4</th><th>26Q1</th><th>26Q2</th><th>26Q3+</th><th>常青</th></tr></thead>
           <tbody>{mid_html.get('女鞋','')}</tbody>
         </table>
       </div>
