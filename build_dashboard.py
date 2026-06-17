@@ -168,13 +168,21 @@ for rk in ['115','116','117','120']:
 
 # Seasonal new product
 seas_data = {}
+seas_meta = {}  # overall metrics (yoy etc)
 if '5' in seas:
-    # seas rows are stored as {'label': ..., 'data': {...}} — extract the data dict
     r5d = seas['5'].get('data', {})
     r7d = seas.get('7', {}).get('data', {}) if isinstance(seas.get('7'), dict) else {}
     r6d = seas.get('6', {}).get('data', {}) if isinstance(seas.get('6'), dict) else {}
     r19d = seas.get('19', {}).get('data', {}) if isinstance(seas.get('19'), dict) else {}
     r25d = seas.get('25', {}).get('data', {}) if isinstance(seas.get('25'), dict) else {}
+    # NEW: extract 环比(row9), SKU个数(row16), 库存数量(row21), 同比(row11)
+    r9d = seas.get('9', {}).get('data', {}) if isinstance(seas.get('9'), dict) else {}
+    r16d = seas.get('16', {}).get('data', {}) if isinstance(seas.get('16'), dict) else {}
+    r21d = seas.get('21', {}).get('data', {}) if isinstance(seas.get('21'), dict) else {}
+    r11d = seas.get('11', {}).get('data', {}) if isinstance(seas.get('11'), dict) else {}
+    # Overall YoY for 服 and 鞋 (row 11 col 4=服, col 15=鞋)
+    seas_meta['cloth_yoy'] = float(r11d.get('4', 0))*100 if '4' in r11d else 0
+    seas_meta['shoe_yoy'] = float(r11d.get('15', 0))*100 if '15' in r11d else 0
     for ck, lbl in [('4','2025Q4及以前(服)'),('6','2026Q1(服)'),('8','2026Q2(服)'),('10','2026Q3+(服)'),('13','26年常青(服)'),
                      ('15','2025Q4及以前(鞋)'),('18','2026Q1(鞋)'),('20','2026Q2(鞋)'),('22','2026Q3+(鞋)'),('25','26年常青(鞋)')]:
         if ck in r5d:
@@ -184,7 +192,33 @@ if '5' in seas:
                 'q': int(float(r6d.get(ck,0))) if ck in r6d else 0,
                 'su': float(r19d.get(ck,0))*100 if ck in r19d else 0,
                 'sat': float(r25d.get(ck,0))*100 if ck in r25d else 0,
+                # NEW fields for season comparison
+                'mom': float(r9d.get(ck,0))*100 if ck in r9d else 0,
+                'sku': int(float(r16d.get(ck,0))) if ck in r16d else 0,
+                'stock_qty': int(float(r21d.get(ck,0))) if ck in r21d else 0,
             }
+
+# Build season comparison HTML tables (服 vs 鞋, seasons as columns)
+_seas_metrics = [('流水','f',False),('环比','mom',True),('SKU数','sku',False),('库存量','stock_qty',False),('折扣率','d',True),('动销率','su',True)]
+_seas_keys = [('2025Q4及以前(服)','2025Q4及以前(鞋)'),('2026Q1(服)','2026Q1(鞋)'),('2026Q2(服)','2026Q2(鞋)'),('2026Q3+(服)','2026Q3+(鞋)'),('26年常青(服)','26年常青(鞋)')]
+def _sfmt(v, pct):
+    if v is None: return '—', ''
+    if pct: return f'{v:+.1f}%' if v>0 else f'{v:.1f}%', f' class="{"hi" if v>0 else "lo"}"'
+    return f'¥{v:,.0f}', ''
+clothing_seas_html = ''
+shoe_seas_html = ''
+for nm, fk, is_pct in _seas_metrics:
+    c_row = f'<tr><td>{nm}</td>'
+    s_row = f'<tr><td>{nm}</td>'
+    for ck, sk in _seas_keys:
+        cv = seas_data.get(ck, {}).get(fk) if ck in seas_data else None
+        sv = seas_data.get(sk, {}).get(fk) if sk in seas_data else None
+        ctxt, ccls = _sfmt(cv, is_pct)
+        stxt, scls = _sfmt(sv, is_pct)
+        c_row += f'<td{ccls}>{ctxt}</td>'
+        s_row += f'<td{scls}>{stxt}</td>'
+    clothing_seas_html += c_row + '</tr>'
+    shoe_seas_html += s_row + '</tr>'
 
 # Member extraction
 member_rows = []
@@ -659,14 +693,30 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
   </div>
 
   <div id="tab-seas" class="data-tab" style="display:none">
+    <div class="seas-summary" style="display:flex;gap:20px;margin-bottom:12px;padding:10px 14px;background:#f8fafc;border-radius:8px;font-size:13px">
+      <span><b>服</b> 整体同比: <span style="color:{'#ef4444' if seas_meta.get('cloth_yoy',0)<0 else '#22c55e'}">{pct(seas_meta.get('cloth_yoy',0),1)}</span></span>
+      <span><b>鞋</b> 整体同比: <span style="color:{'#ef4444' if seas_meta.get('shoe_yoy',0)<0 else '#22c55e'}">{pct(seas_meta.get('shoe_yoy',0),1)}</span></span>
+    </div>
     <div class="grid2">
       <div class="chart-wrap"><canvas id="chartSeasFlow"></canvas></div>
       <div class="chart-wrap"><canvas id="chartSeasRate"></canvas></div>
     </div>
-    <table class="tbl" style="margin-top:14px">
-      <thead><tr><th>季节</th><th>流水</th><th>数量</th><th>折扣率</th><th>SKU动销率</th><th>可满足率</th></tr></thead>
-      <tbody id="seasTable"></tbody>
-    </table>
+    <div class="grid2" style="margin-top:14px;gap:16px">
+      <div>
+        <h4 style="font-size:14px;margin-bottom:8px;color:var(--blue)">👕 服 季节对比</h4>
+        <table class="tbl" style="width:100%">
+          <thead><tr><th>指标</th><th>25Q4旧品</th><th>26Q1</th><th>26Q2</th><th>26Q3+</th><th>26常青</th></tr></thead>
+          <tbody id="seasClothTable"></tbody>
+        </table>
+      </div>
+      <div>
+        <h4 style="font-size:14px;margin-bottom:8px;color:var(--red)">👟 鞋 季节对比</h4>
+        <table class="tbl" style="width:100%">
+          <thead><tr><th>指标</th><th>25Q4旧品</th><th>26Q1</th><th>26Q2</th><th>26Q3+</th><th>26常青</th></tr></thead>
+          <tbody id="seasShoeTable"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <div id="tab-sub" class="data-tab" style="display:none">
@@ -810,12 +860,9 @@ function initTables() {{
   }}
   document.getElementById('cateTable').innerHTML=ct;
 
-  // Season table
-  let st='';
-  for(const[sn,sd]of Object.entries(D.seas)){{
-    st+=`<tr><td>${{sn}}</td><td>¥${{sd.f.toLocaleString()}}</td><td>${{sd.q}}</td><td>${{sd.d.toFixed(2)}}%</td><td>${{sd.su.toFixed(2)}}%</td><td>${{sd.sat.toFixed(2)}}%</td></tr>`;
-  }}
-  document.getElementById('seasTable').innerHTML=st;
+  // Season tables — two modules: 服 seasons / 鞋 seasons (built in Python to avoid f-string brace issues)
+  document.getElementById('seasClothTable').innerHTML='{clothing_seas_html}';
+  document.getElementById('seasShoeTable').innerHTML='{shoe_seas_html}';
 
   // Sub tables
   let sc=''; D.sub_ps.filter(r=>!r.isAcc).forEach(r=>{{ sc+='<tr><td>'+r.n+'</td><td>¥'+r.f.toLocaleString()+'</td><td>'+(r.d||0).toFixed(2)+'%</td></tr>'; }});
@@ -942,32 +989,39 @@ function drawCateCharts() {{
 
 
 function drawSeasCharts() {{
-  const D=DATA, labels=Object.keys(D.seas).slice(0,5); // clothing only
-  const sLabels=Object.keys(D.seas);
-  const flows=sLabels.map(s=>D.seas[s].f);
-
+  const D=DATA;
+  // Seasons for comparison (服 & 鞋 share the same season labels)
+  const seasLabels=['25Q4旧品','26Q1','26Q2','26Q3+','常青'];
+  const cKeys=['2025Q4及以前(服)','2026Q1(服)','2026Q2(服)','2026Q3+(服)','26年常青(服)'];
+  const sKeys=['2025Q4及以前(鞋)','2026Q1(鞋)','2026Q2(鞋)','2026Q3+(鞋)','26年常青(鞋)'];
+  // Flow comparison
+  const cFlows=cKeys.map(k=>D.seas[k]?D.seas[k].f:0);
+  const sFlows=sKeys.map(k=>D.seas[k]?D.seas[k].f:0);
   destroyChart('chartSeasFlow');
   chartInstances.chartSeasFlow = new Chart(document.getElementById('chartSeasFlow'),{{
-    type:'bar', data:{{ labels:sLabels, datasets:[
-      {{ label:'流水', data:flows, backgroundColor:sLabels.map((_,i)=>i<5?colors.blueBg:colors.redBg), borderColor:sLabels.map((_,i)=>i<5?colors.blue:colors.red), borderWidth:1.5, borderRadius:4 }}
+    type:'bar', data:{{ labels:seasLabels, datasets:[
+      {{ label:'服流水', data:cFlows, backgroundColor:colors.blueBg, borderColor:colors.blue, borderWidth:1.5, borderRadius:4 }},
+      {{ label:'鞋流水', data:sFlows, backgroundColor:colors.redBg, borderColor:colors.red, borderWidth:1.5, borderRadius:4 }}
     ]}},
-    options:{{ responsive:true, maintainAspectRatio:false, indexAxis:'y',
-      plugins:{{ title:{{display:true,text:'新品季节流水分布',font:{{size:14}}}} }},
-      scales:{{ x:{{ ticks:{{ callback:v=>'¥'+v.toLocaleString()}} }} }}
+    options:{{ responsive:true, maintainAspectRatio:false,
+      plugins:{{ title:{{display:true,text:'服 vs 鞋 各季节流水对比',font:{{size:14}}}}, legend:{{position:'bottom'}} }},
+      scales:{{ y:{{ ticks:{{ callback:v=>'¥'+v.toLocaleString()}} }} }}
     }}
-  }});
-
-  const discRates=sLabels.map(s=>D.seas[s].d);
+  }}));
+  // Stock qty comparison
+  const cStocks=cKeys.map(k=>D.seas[k]?D.seas[k].stock_qty:0);
+  const sStocks=sKeys.map(k=>D.seas[k]?D.seas[k].stock_qty:0);
   destroyChart('chartSeasRate');
   chartInstances.chartSeasRate = new Chart(document.getElementById('chartSeasRate'),{{
-    type:'bar', data:{{ labels:sLabels, datasets:[
-      {{ label:'折扣率%', data:discRates, backgroundColor:discRates.map(d=>d>50?colors.redBg:colors.amber+'40'), borderColor:discRates.map(d=>d>50?colors.red:colors.amber), borderWidth:1.5, borderRadius:4 }}
+    type:'bar', data:{{ labels:seasLabels, datasets:[
+      {{ label:'服库存', data:cStocks, backgroundColor:colors.blueBg, borderColor:colors.blue, borderWidth:1.5, borderRadius:4 }},
+      {{ label:'鞋库存', data:sStocks, backgroundColor:colors.redBg, borderColor:colors.red, borderWidth:1.5, borderRadius:4 }}
     ]}},
-    options:{{ responsive:true, maintainAspectRatio:false, indexAxis:'y',
-      plugins:{{ title:{{display:true,text:'新品季节折扣率 (越低越健康)',font:{{size:14}}}} }},
-      scales:{{ x:{{ ticks:{{ callback:v=>v.toFixed(0)+'%'}},max:120 }} }}
+    options:{{ responsive:true, maintainAspectRatio:false,
+      plugins:{{ title:{{display:true,text:'服 vs 鞋 各季节库存对比',font:{{size:14}}}}, legend:{{position:'bottom'}} }},
+      scales:{{ y:{{ ticks:{{ callback:v=>v.toLocaleString()}} }} }}
     }}
-  }});
+  }}));
 }}
 
 function refreshAllCharts() {{
