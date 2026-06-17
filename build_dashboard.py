@@ -45,31 +45,57 @@ for i, dk in enumerate(day_keys):
     })
 
 cat_data = {}
-for ck, cn in [('4','男装'),('6','女装'),('14','鞋'),('16','配件')]:
+
+# Helper for safe extraction with fallback
+def cval(row_label, col_key, default=0):
+    for rk, rd in cate.items():
+        if rd.get('label') == row_label:
+            v = rd.get('data', {}).get(col_key, None)
+            return float(v) if v is not None else default
+    return default
+
+# Group 1: Product categories (鞋服器配) — full metrics including stock
+for ck, cn in [('14','鞋'),('16','服'),('18','器配')]:
     f_c = float(cate['36']['data'].get(ck,0))
-    qty = int(float(cate['37']['data'].get(ck,0)))
     cat_data[cn] = {
-        'flow': f_c, 'qty': qty,
-        'disc': float(cate['38']['data'].get(ck,0))*100,
-        'yoy': float(cate['42']['data'].get(ck,0))*100,
-        'mom': float(cate['40']['data'].get(ck,0))*100,
-        'f_share': float(cate['44']['data'].get(ck,0))*100,
-        'sku_s': int(float(cate['47']['data'].get(ck,0))),
-        's_qty': int(float(cate['52']['data'].get(ck,0))),
-        's_sku': int(float(cate['53']['data'].get(ck,0))),
-        'sku_u': (float(cate['50']['data'].get(ck,0))*100) if cate['50']['data'].get(ck) is not None else 0,
-        'sat': float(cate['56']['data'].get(ck,0))*100,
-        'st': float(cate['57']['data'].get(ck,0))*100,
+        'flow': f_c,
+        'qty': int(cval('数量', ck)),
+        'disc': cval('折扣', ck)*100,
+        'yoy': cval('同比', ck)*100,
+        'mom': cval('环比', ck)*100,
+        'f_share': cval('流水占比', ck)*100,
+        'sku_s': int(cval('SKU(个数)', ck)),
+        's_qty': int(cval('库存数量', ck)),
+        's_sku': int(cval('库存SKU(个数)', ck)),
+        'sku_u': cval('SKU动销率', ck)*100,
+        'sat': cval('无可补断码率', ck)*100,
+        'st': cval('实际断码率', ck)*100,
+        'group': 'product',
     }
 
-# Category match
-total_sq = sum(cat_data[c]['s_qty'] for c in cat_data)
-for cn in cat_data:
-    sqs = cat_data[cn]['s_qty']/total_sq*100
-    fs = cat_data[cn]['f_share']
-    cat_data[cn]['s_q_share'] = sqs
-    cat_data[cn]['gap'] = fs - sqs
-    cat_data[cn]['match_lbl'] = '匹配' if abs(fs-sqs)<=5 else (f'销>库+{fs-sqs:.1f}pp' if fs>sqs else f'库>销{sqs-fs:.1f}pp')
+# Group 2: Customer gender (男女童) — limited metrics
+for ck, cn in [('4','男'),('6','女'),('8','童')]:
+    f_c = float(cate['36']['data'].get(ck,0))
+    cat_data[cn] = {
+        'flow': f_c,
+        'qty': int(cval('数量', ck)),
+        'disc': cval('折扣', ck)*100,
+        'yoy': cval('同比', ck)*100,
+        'mom': cval('环比', ck)*100,
+        'f_share': cval('流水占比', ck)*100,
+        'group': 'gender',
+    }
+
+# Category match (only for product group)
+product_cats = [cn for cn, cd in cat_data.items() if cd.get('group') == 'product']
+total_sq = sum(cat_data[c]['s_qty'] for c in product_cats) if product_cats else 0
+for cn in product_cats:
+    cd = cat_data[cn]
+    sqs = cd['s_qty']/total_sq*100 if total_sq > 0 else 0
+    fs = cd['f_share']
+    cd['s_q_share'] = sqs
+    cd['gap'] = fs - sqs
+    cd['match_lbl'] = '匹配' if abs(fs-sqs)<=5 else (f'销>库+{fs-sqs:.1f}pp' if fs>sqs else f'库>销{sqs-fs:.1f}pp')
 
 # TOP
 top_labels = {'125':'TOP10','126':'TOP20','127':'TOP40','128':'TOP60','129':'TOP100'}
@@ -226,7 +252,7 @@ payload = {
     'shoe_share': cat_data['鞋']['f_share'],
     'shoe_sku_u': cat_data['鞋']['sku_u'],
     'shoe_per_sku': cat_data['鞋']['flow'] / cat_data['鞋']['sku_s'] if cat_data['鞋']['sku_s'] else 0,
-    'acc_per_sku': cat_data['配件']['flow'] / cat_data['配件']['sku_s'] if cat_data['配件']['sku_s'] else 0,
+    'acc_per_sku': cat_data['器配']['flow'] / cat_data['器配']['sku_s'] if cat_data['器配']['sku_s'] else 0,
     'total_stock_qty': total_sq,
     'shoe_s_qty': cat_data['鞋']['s_qty'],
     'shoe_s_sku': cat_data['鞋']['s_sku'],
@@ -330,7 +356,7 @@ if worst_cat_yoy < best_cat_yoy:
     p3_loss += f'，{worst_cat}环比{pct(cat_data[worst_cat]["mom"],1)}加速恶化'
 
 cat_yoy_parts = []
-for cn in ['男装','女装','鞋','配件']:
+for cn in ['鞋','服','器配','男','女','童']:
     if cn in cat_data:
         cat_yoy_parts.append(f'{cn}{pct(cat_data[cn]["yoy"],1)}')
 p3_detail_cats = ' | '.join(cat_yoy_parts)
@@ -392,7 +418,7 @@ flow_conv_analysis = "客流增长但成交率下降—'进店不买'问题突�
 
 # ───────── Dynamic FULL_TEXT ─────────
 ytd_parts = []
-for cn in ['男装','女装','鞋','配件']:
+for cn in ['鞋','服','器配','男','女','童']:
     if cn in cat_data:
         ytd_parts.append(f'{cn}¥{cat_data[cn]["flow"]/10000:.1f}万（同比{pct(cat_data[cn]["yoy"],1)}）')
 
@@ -415,9 +441,9 @@ FULL_TEXT_CONTENT = f'''<b>{period}周报分析稿</b> | {store} | {week_range}
 
 4、鞋类：流水¥{cat_data["鞋"]["flow"]/10000:.1f}万，占比{pa(cat_data["鞋"]["f_share"],1)}，同比{pct(cat_data["鞋"]["yoy"],1)}。SKU动销率仅{pa(cat_data["鞋"]["sku_u"],1)}，{cat_data["鞋"]["sku_s"]}个在售SKU中约{shoe_zero_pct:.0f}%一周0动销。
 
-5、服装品类：男装¥{cat_data["男装"]["flow"]/10000:.1f}万（同比{pct(cat_data["男装"]["yoy"],1)}），女装¥{cat_data["女装"]["flow"]/10000:.1f}万（同比{pct(cat_data["女装"]["yoy"],1)}）。
+5、服装（按性别）：男¥{cat_data["男"]["flow"]/10000:.1f}万（同比{pct(cat_data["男"]["yoy"],1)}），女¥{cat_data["女"]["flow"]/10000:.1f}万（同比{pct(cat_data["女"]["yoy"],1)}），其中童装¥{cat_data["童"]["flow"]/10000:.1f}万。
 
-6、配件：¥{cat_data["配件"]["flow"]/10000:.1f}万（同比{pct(cat_data["配件"]["yoy"],1)}），但{cat_data["配件"]["sku_s"]}个在售SKU中动销率仅{pa(cat_data["配件"]["sku_u"],1)}，每SKU产出{money(cat_data["配件"]["flow"]/cat_data["配件"]["sku_s"])}。
+6、器配：¥{cat_data["器配"]["flow"]/10000:.1f}万（同比{pct(cat_data["器配"]["yoy"],1)}），{cat_data["器配"]["sku_s"]}个在售SKU中动销率{pa(cat_data["器配"]["sku_u"],1)}，每SKU产出{money(cat_data["器配"]["flow"]/cat_data["器配"]["sku_s"])}。
 
 7、日别结构：周一¥{daily_rows[0]["f"]/10000:.1f}万（达成{pa(daily_rows[0]["a"],1)}）→ 周二¥{daily_rows[1]["f"]/10000:.1f}万 → 周三¥{daily_rows[2]["f"]/10000:.1f}万 → 周四¥{daily_rows[3]["f"]/10000:.1f}万 → 周五¥{daily_rows[4]["f"]/10000:.1f}万（同比{pct(daily_rows[4]["y"],1)}）→ <b>{worst_day["n"]}¥{worst_day["f"]/10000:.1f}万（达成{pa(worst_day["a"],1)}，全周最低）</b>→ {best_day["n"]}¥{best_day["f"]/10000:.1f}万（达成{pa(best_day["a"],1)}，全周最高）。
 
@@ -751,14 +777,26 @@ function initTables() {{
   }});
   document.getElementById('matrixTable').innerHTML=mt;
 
-  // Category table
+  // Category table (two groups: product + gender)
   let ct='';
+  let lastGroup='';
   for(const[cn,cd]of Object.entries(D.category)){{
-    const mcls=cd.gap>5?'hi':(cd.gap<-5?'lo':'');
-    ct+=`<tr><td>${{cn}}</td><td>¥${{cd.flow.toLocaleString()}}</td><td>${{cd.f_share.toFixed(2)}}%</td>
-    <td class="lo">${{(cd.yoy>0?'+':'')+cd.yoy.toFixed(2)}}%</td><td class="lo">${{(cd.mom>0?'+':'')+cd.mom.toFixed(2)}}%</td>
-    <td>${{cd.disc.toFixed(2)}}%</td><td>${{cd.sku_s}}</td><td>${{cd.sku_u.toFixed(2)}}%</td>
-    <td>${{cd.s_qty.toLocaleString()}}</td><td>${{cd.s_q_share.toFixed(2)}}%</td><td class="${{mcls}}">${{cd.match_lbl}}</td></tr>`;
+    if(cd.group&&cd.group!==lastGroup){{
+      const gname=cd.group==='product'?'📦 产品类别 (鞋/服/器配)':'👥 顾客性别 (男/女/童)';
+      ct+='<tr style="background:#e8edf3;font-weight:700"><td colspan="11" style="text-align:left;padding:7px 10px;font-size:13px">'+gname+'</td></tr>';
+      lastGroup=cd.group;
+    }}
+    if(cd.group==='product'){{
+      const mcls=cd.gap>5?'hi':(cd.gap<-5?'lo':'');
+      ct+='<tr><td>'+cn+'</td><td>¥'+cd.flow.toLocaleString()+'</td><td>'+cd.f_share.toFixed(2)+'%</td>'
+        +'<td class="lo">'+(cd.yoy>0?'+':'')+cd.yoy.toFixed(2)+'%</td><td class="lo">'+(cd.mom>0?'+':'')+cd.mom.toFixed(2)+'%</td>'
+        +'<td>'+cd.disc.toFixed(2)+'%</td><td>'+cd.sku_s+'</td><td>'+cd.sku_u.toFixed(2)+'%</td>'
+        +'<td>'+cd.s_qty.toLocaleString()+'</td><td>'+cd.s_q_share.toFixed(2)+'%</td><td class="'+mcls+'">'+cd.match_lbl+'</td></tr>';
+    }}else{{
+      ct+='<tr><td>'+cn+'</td><td>¥'+cd.flow.toLocaleString()+'</td><td>'+cd.f_share.toFixed(2)+'%</td>'
+        +'<td class="lo">'+(cd.yoy>0?'+':'')+cd.yoy.toFixed(2)+'%</td><td class="lo">'+(cd.mom>0?'+':'')+cd.mom.toFixed(2)+'%</td>'
+        +'<td>'+(cd.disc?cd.disc.toFixed(2)+'%':'—')+'</td><td colspan="5" style="color:#94a3b8;font-size:11px">（品类维度不适用）</td></tr>';
+    }}
   }}
   document.getElementById('cateTable').innerHTML=ct;
 
@@ -858,33 +896,38 @@ function drawDailyCharts() {{
 }}
 
 function drawCateCharts() {{
-  const D=DATA, cats=Object.keys(D.category);
-  const flows=cats.map(c=>D.category[c].flow), yoys=cats.map(c=>D.category[c].yoy);
-  const sShares=cats.map(c=>D.category[c].s_q_share), fShares=cats.map(c=>D.category[c].f_share);
-
+  const D=DATA;
+  // Chart 1: Product categories (鞋/服/器配)
+  const prodCats=['鞋','服','器配'];
+  const pFlows=prodCats.map(c=>D.category[c]?.flow||0);
+  const pYoys=prodCats.map(c=>D.category[c]?.yoy||0);
+  const pDiscs=prodCats.map(c=>D.category[c]?.disc||0);
   destroyChart('chartCateFlow');
   chartInstances.chartCateFlow = new Chart(document.getElementById('chartCateFlow'),{{
-    type:'bar', data:{{ labels:cats, datasets:[
-      {{ label:'流水', data:flows, backgroundColor:[colors.blueBg,colors.purple+'40',colors.redBg,colors.amber+'40'], borderColor:[colors.blue,colors.purple,colors.red,colors.amber], borderWidth:1.5, borderRadius:6, yAxisID:'y' }},
-      {{ label:'同比%', data:yoys, type:'line', borderColor:colors.red, backgroundColor:'transparent', pointRadius:5, pointBackgroundColor:colors.red, yAxisID:'y1' }}
+    type:'bar', data:{{ labels:prodCats, datasets:[
+      {{ label:'流水', data:pFlows, backgroundColor:[colors.redBg,colors.blueBg,colors.amber+'40'], borderColor:[colors.red,colors.blue,colors.amber], borderWidth:1.5, borderRadius:6, yAxisID:'y' }},
+      {{ label:'同比%', data:pYoys, type:'line', borderColor:colors.purple, backgroundColor:'transparent', pointRadius:5, pointBackgroundColor:colors.purple, yAxisID:'y1' }}
     ]}},
     options:{{ responsive:true, maintainAspectRatio:false,
-      plugins:{{ title:{{display:true,text:'品类流水 & 同比',font:{{size:14}}}}, legend:{{position:'bottom'}} }},
+      plugins:{{ title:{{display:true,text:'产品类别 — 鞋 / 服 / 器配',font:{{size:14}}}}, legend:{{position:'bottom'}} }},
       scales:{{ y:{{ position:'left',ticks:{{ callback:v=>'¥'+v.toLocaleString()}} }}, y1:{{ position:'right',ticks:{{ callback:v=>v.toFixed(0)+'%'}},grid:{{drawOnChartArea:false}} }} }}
     }}
-  }});
-
+  }}));
+  // Chart 2: Gender categories (男/女/童)
+  const genCats=['男','女','童'];
+  const gFlows=genCats.map(c=>D.category[c]?.flow||0);
+  const gYoys=genCats.map(c=>D.category[c]?.yoy||0);
   destroyChart('chartCateMatch');
   chartInstances.chartCateMatch = new Chart(document.getElementById('chartCateMatch'),{{
-    type:'bar', data:{{ labels:cats, datasets:[
-      {{ label:'销售占比', data:fShares, backgroundColor:colors.blueBg, borderColor:colors.blue, borderWidth:1.5, borderRadius:4 }},
-      {{ label:'库存占比(数量)', data:sShares, backgroundColor:colors.gray+'40', borderColor:colors.gray, borderWidth:1.5, borderRadius:4 }}
+    type:'bar', data:{{ labels:genCats, datasets:[
+      {{ label:'流水', data:gFlows, backgroundColor:[colors.blueBg,colors.purple+'40',colors.amber+'40'], borderColor:[colors.blue,colors.purple,colors.amber], borderWidth:1.5, borderRadius:6, yAxisID:'y' }},
+      {{ label:'同比%', data:gYoys, type:'line', borderColor:colors.red, backgroundColor:'transparent', pointRadius:5, pointBackgroundColor:colors.red, yAxisID:'y1' }}
     ]}},
     options:{{ responsive:true, maintainAspectRatio:false,
-      plugins:{{ title:{{display:true,text:'品类销售占比 vs 库存数量占比',font:{{size:14}}}}, legend:{{position:'bottom'}} }},
-      scales:{{ y:{{ ticks:{{ callback:v=>v.toFixed(0)+'%'}} }} }}
+      plugins:{{ title:{{display:true,text:'顾客性别 — 男 / 女 / 童',font:{{size:14}}}}, legend:{{position:'bottom'}} }},
+      scales:{{ y:{{ position:'left',ticks:{{ callback:v=>'¥'+v.toLocaleString()}} }}, y1:{{ position:'right',ticks:{{ callback:v=>v.toFixed(0)+'%'}},grid:{{drawOnChartArea:false}} }} }}
     }}
-  }});
+  }}));
 }}
 
 
@@ -1008,10 +1051,24 @@ function parseExcelWorkbook(wb){{
   const r15={{}}; [4,6,8,10,12,14,16,18,20,22,24,28,30,32].forEach(c=>r15[c]=cv(wsMain,priceRow,c));
   const dayC=[4,6,8,10,12,14,16,18], dn=['周一','周二','周三','周四','周五','周六','周日'];
   const daily=[]; for(let i=0;i<7;i++) daily.push({{n:dn[i],t:cv(wsMain,dailyStart+0,dayC[i])||0,f:cv(wsMain,dailyStart+1,dayC[i])||0,a:(cv(wsMain,dailyStart+2,dayC[i])||0)*100,y:(cv(wsMain,dailyStart+3,dayC[i])||0)*100,c:(cv(wsMain,dailyStart+6,dayC[i])||0)*100,v:Math.round(cv(wsMain,dailyStart+7,dayC[i])||0),tk:cv(wsMain,dailyStart+8,dayC[i])||0,at:cv(wsMain,dailyStart+9,dayC[i])||0}});
-  const catC={{'4':'男装','6':'女装','14':'鞋','16':'配件'}}; const catData={{}};
-  for(const[col,nm]of Object.entries(catC)){{ const cn=parseInt(col); const f=cv(wsMain,cateStart+1,cn)||0; const ss=cv(wsMain,cateStart+12,cn)||0; catData[nm]={{flow:f,qty:cv(wsMain,cateStart+2,cn)||0,disc:(cv(wsMain,cateStart+3,cn)||0)*100,yoy:(cv(wsMain,cateStart+7,cn)||0)*100,mom:(cv(wsMain,cateStart+5,cn)||0)*100,f_share:(cv(wsMain,cateStart+9,cn)||0)*100,sku_s:ss,s_qty:cv(wsMain,cateStart+17,cn)||0,s_sku:cv(wsMain,cateStart+18,cn)||0,sku_u:(cv(wsMain,cateStart+15,cn)||0)*100,sat:(cv(wsMain,cateStart+21,cn)||0)*100,st:(cv(wsMain,cateStart+22,cn)||0)*100}}; }}
-  const tsq=Object.values(catData).reduce((s,c)=>s+(c.s_qty||0),0);
-  for(const[nm,cd]of Object.entries(catData)){{ const sqs=tsq>0?(cd.s_qty/tsq*100):0,fs=cd.f_share; cd.s_q_share=sqs; cd.gap=fs-sqs; cd.match_lbl=Math.abs(fs-sqs)<=5?'匹配':(fs>sqs?'销>库+'+((fs-sqs).toFixed(1))+'pp':'库>销'+((sqs-fs).toFixed(1))+'pp'); }}
+  const catC={{'14':'鞋','16':'服','18':'器配','4':'男','6':'女','8':'童'}}; const catData={{}};
+  for(const[col,nm]of Object.entries(catC)){{ 
+    const cn=parseInt(col); 
+    const isProduct=cn>=14; // cols 14/16/18 = product group
+    const f=cv(wsMain,cateStart+1,cn)||0; 
+    const ss=cv(wsMain,cateStart+12,cn)||0; 
+    catData[nm]={{flow:f,qty:cv(wsMain,cateStart+2,cn)||0,disc:(cv(wsMain,cateStart+3,cn)||0)*100,yoy:(cv(wsMain,cateStart+7,cn)||0)*100,mom:(cv(wsMain,cateStart+5,cn)||0)*100,f_share:(cv(wsMain,cateStart+9,cn)||0)*100,group:isProduct?'product':'gender'}};
+    if(isProduct){{ 
+      catData[nm].sku_s=ss;
+      catData[nm].s_qty=cv(wsMain,cateStart+17,cn)||0;
+      catData[nm].s_sku=cv(wsMain,cateStart+18,cn)||0;
+      catData[nm].sku_u=(cv(wsMain,cateStart+15,cn)||0)*100;
+      catData[nm].sat=(cv(wsMain,cateStart+21,cn)||0)*100;
+      catData[nm].st=(cv(wsMain,cateStart+22,cn)||0)*100;
+    }}
+  }}
+  const tsq=Object.values(catData).filter(c=>c.group==='product').reduce((s,c)=>s+(c.s_qty||0),0);
+  for(const[nm,cd]of Object.entries(catData)){{ if(cd.group!=='product') continue; const sqs=tsq>0?(cd.s_qty/tsq*100):0,fs=cd.f_share; cd.s_q_share=sqs; cd.gap=fs-sqs; cd.match_lbl=Math.abs(fs-sqs)<=5?'匹配':(fs>sqs?'销>库+'+((fs-sqs).toFixed(1))+'pp':'库>销'+((sqs-fs).toFixed(1))+'pp'); }}
   const topData={{}}; const tl={{'0':'TOP10','1':'TOP20','2':'TOP40','3':'TOP60','4':'TOP100'}};
   for(let i=0;i<5;i++){{ const r=topStart+i,d4=cv(wsMain,r,4),d6=cv(wsMain,r,6); if(d4!==null||d6!==null) topData[tl[String(i)]]={{'4':(d4||0)*100,'6':(d6||0)*100,'8':(cv(wsMain,r,8)||0)*100,'10':(cv(wsMain,r,10)||0)*100,'13':(cv(wsMain,r,13)||0)*100}}; }}
   const subPs=[]; let inSubPs=false, inAcc=false;
@@ -1060,7 +1117,7 @@ function parseExcelWorkbook(wb){{
 function computeDerivedMetrics(d){{
   const w=(d.category['鞋']?d.category['鞋'].flow:0);
   const shoePS=w/(d.category['鞋']?d.category['鞋'].sku_s:1);
-  const accPS=(d.category['配件']?d.category['配件'].flow:0)/(d.category['配件']?d.category['配件'].sku_s:1);
+  const accPS=(d.category['器配']?d.category['器配'].flow:0)/(d.category['器配']?d.category['器配'].sku_s:1);
   const cs=Object.entries(d.category).sort((a,b)=>a[1].yoy-b[1].yoy);
   const wc=cs[0]?cs[0][0]:'--',wy=cs[0]?cs[0][1].yoy:0;
   const sat=d.daily[5];
