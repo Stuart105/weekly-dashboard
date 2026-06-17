@@ -500,21 +500,21 @@ function drawSeasCharts() {
       scales:{ y:{ position:'left',ticks:{ callback:v=>'¥'+v.toLocaleString()} }, y1:{ position:'right',ticks:{ callback:v=>v.toFixed(0)+'%'},grid:{drawOnChartArea:false} } }
     }
   });
-  // 流水占比 vs 库存占比 trend comparison
+  // 流水占比(柱状) vs 库存占比(实线) comparison
   const cFShares=cKeys.map(k=>D.seas[k]?D.seas[k].fs:0);
   const sFShares=sKeys.map(k=>D.seas[k]?D.seas[k].fs:0);
   const cStkShares=cKeys.map(k=>D.seas[k]?D.seas[k].stk_share:0);
   const sStkShares=sKeys.map(k=>D.seas[k]?D.seas[k].stk_share:0);
   destroyChart('chartSeasRate');
   chartInstances.chartSeasRate = new Chart(document.getElementById('chartSeasRate'),{
-    type:'line', data:{ labels:seasLabels, datasets:[
-      { label:'服流水占比', data:cFShares, borderColor:colors.blue, backgroundColor:'transparent', pointRadius:5, pointBackgroundColor:colors.blue, tension:0.3, borderWidth:2.5 },
-      { label:'鞋流水占比', data:sFShares, borderColor:colors.red, backgroundColor:'transparent', pointRadius:5, pointBackgroundColor:colors.red, tension:0.3, borderWidth:2.5 },
-      { label:'服库存占比', data:cStkShares, borderColor:colors.blue, backgroundColor:'transparent', pointRadius:4, pointStyle:'rect', borderDash:[5,3], tension:0.3, borderWidth:2 },
-      { label:'鞋库存占比', data:sStkShares, borderColor:colors.red, backgroundColor:'transparent', pointRadius:4, pointStyle:'rect', borderDash:[5,3], tension:0.3, borderWidth:2 }
+    type:'bar', data:{ labels:seasLabels, datasets:[
+      { label:'服流水占比', data:cFShares, backgroundColor:colors.blueBg, borderColor:colors.blue, borderWidth:1.5, borderRadius:4 },
+      { label:'鞋流水占比', data:sFShares, backgroundColor:colors.redBg, borderColor:colors.red, borderWidth:1.5, borderRadius:4 },
+      { label:'服库存占比', data:cStkShares, type:'line', borderColor:colors.blue, backgroundColor:'transparent', pointRadius:5, pointBackgroundColor:colors.blue, tension:0.3, borderWidth:2.5 },
+      { label:'鞋库存占比', data:sStkShares, type:'line', borderColor:colors.red, backgroundColor:'transparent', pointRadius:5, pointBackgroundColor:colors.red, tension:0.3, borderWidth:2.5 }
     ]},
     options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ title:{display:true,text:'各季节 流水占比 vs 库存占比',font:{size:14}}, legend:{position:'bottom'} },
+      plugins:{ title:{display:true,text:'流水占比(柱) vs 库存占比(线)',font:{size:14}}, legend:{position:'bottom'} },
       scales:{ y:{ ticks:{ callback:v=>v.toFixed(1)+'%'}, max:80 } }
     }
   });
