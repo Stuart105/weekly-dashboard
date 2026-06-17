@@ -1007,7 +1007,7 @@ function drawSeasCharts() {{
       plugins:{{ title:{{display:true,text:'服 vs 鞋 各季节流水对比',font:{{size:14}}}}, legend:{{position:'bottom'}} }},
       scales:{{ y:{{ ticks:{{ callback:v=>'¥'+v.toLocaleString()}} }} }}
     }}
-  }}));
+  }});
   // Stock qty comparison
   const cStocks=cKeys.map(k=>D.seas[k]?D.seas[k].stock_qty:0);
   const sStocks=sKeys.map(k=>D.seas[k]?D.seas[k].stock_qty:0);
@@ -1021,7 +1021,7 @@ function drawSeasCharts() {{
       plugins:{{ title:{{display:true,text:'服 vs 鞋 各季节库存对比',font:{{size:14}}}}, legend:{{position:'bottom'}} }},
       scales:{{ y:{{ ticks:{{ callback:v=>v.toLocaleString()}} }} }}
     }}
-  }}));
+  }});
 }}
 
 function refreshAllCharts() {{
