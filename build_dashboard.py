@@ -73,10 +73,10 @@ for ck, cn in [('14','鞋'),('16','服'),('18','器配')]:
         'group': 'product',
     }
 
-# Group 2: Customer gender (男女童) — limited metrics
-for ck, cn in [('4','男'),('6','女'),('8','童')]:
+# Group 2: Customer gender (男女童, 童装=J-K合并列C10)
+for ck, cn in [('4','男'),('6','女'),('10','童')]:
     f_c = float(cate['36']['data'].get(ck,0))
-    cat_data[cn] = {
+    entry = {
         'flow': f_c,
         'qty': int(cval('数量', ck)),
         'disc': cval('折扣', ck)*100,
@@ -85,6 +85,14 @@ for ck, cn in [('4','男'),('6','女'),('8','童')]:
         'f_share': cval('流水占比', ck)*100,
         'group': 'gender',
     }
+    # Add stock data where available (cval returns 0 for missing)
+    entry['sku_s'] = int(cval('SKU(个数)', ck))
+    entry['s_qty'] = int(cval('库存数量', ck))
+    entry['s_sku'] = int(cval('库存SKU(个数)', ck))
+    entry['sku_u'] = cval('SKU动销率', ck)*100
+    entry['sat'] = cval('无可补断码率', ck)*100
+    entry['st'] = cval('实际断码率', ck)*100
+    cat_data[cn] = entry
 
 # Category match (only for product group)
 product_cats = [cn for cn, cd in cat_data.items() if cd.get('group') == 'product']
@@ -789,13 +797,15 @@ function initTables() {{
     if(cd.group==='product'){{
       const mcls=cd.gap>5?'hi':(cd.gap<-5?'lo':'');
       ct+='<tr><td>'+cn+'</td><td>¥'+cd.flow.toLocaleString()+'</td><td>'+cd.f_share.toFixed(2)+'%</td>'
-        +'<td class="lo">'+(cd.yoy>0?'+':'')+cd.yoy.toFixed(2)+'%</td><td class="lo">'+(cd.mom>0?'+':'')+cd.mom.toFixed(2)+'%</td>'
-        +'<td>'+cd.disc.toFixed(2)+'%</td><td>'+cd.sku_s+'</td><td>'+cd.sku_u.toFixed(2)+'%</td>'
+        +'<td class="'+(cd.yoy>0?'hi':'lo')+'">'+(cd.yoy>0?'+':'')+cd.yoy.toFixed(2)+'%</td><td class="'+(cd.mom>0?'hi':'lo')+'">'+(cd.mom>0?'+':'')+cd.mom.toFixed(2)+'%</td>'
+        +'<td>'+cd.disc.toFixed(2)+'%</td><td>'+cd.sku_s+'</td><td>'+(cd.sku_u&&cd.sku_u>0?cd.sku_u.toFixed(2)+'%':'—')+'</td>'
         +'<td>'+cd.s_qty.toLocaleString()+'</td><td>'+cd.s_q_share.toFixed(2)+'%</td><td class="'+mcls+'">'+cd.match_lbl+'</td></tr>';
     }}else{{
+      const ycls=cd.yoy>0?'hi':'lo', mcls=cd.mom>0?'hi':'lo';
       ct+='<tr><td>'+cn+'</td><td>¥'+cd.flow.toLocaleString()+'</td><td>'+cd.f_share.toFixed(2)+'%</td>'
-        +'<td class="lo">'+(cd.yoy>0?'+':'')+cd.yoy.toFixed(2)+'%</td><td class="lo">'+(cd.mom>0?'+':'')+cd.mom.toFixed(2)+'%</td>'
-        +'<td>'+(cd.disc?cd.disc.toFixed(2)+'%':'—')+'</td><td colspan="5" style="color:#94a3b8;font-size:11px">（品类维度不适用）</td></tr>';
+        +'<td class="'+ycls+'">'+(cd.yoy>0?'+':'')+cd.yoy.toFixed(2)+'%</td><td class="'+mcls+'">'+(cd.mom>0?'+':'')+cd.mom.toFixed(2)+'%</td>'
+        +'<td>'+(cd.disc?cd.disc.toFixed(2)+'%':'—')+'</td><td>'+(cd.sku_s?cd.sku_s:'—')+'</td><td>'+(cd.sku_u&&cd.sku_u>0?cd.sku_u.toFixed(2)+'%':'—')+'</td>'
+        +'<td>'+(cd.s_qty?cd.s_qty.toLocaleString():'—')+'</td><td colspan="2" style="color:#94a3b8;font-size:11px">（匹配分析仅产品维度）</td></tr>';
     }}
   }}
   document.getElementById('cateTable').innerHTML=ct;
@@ -1051,21 +1061,13 @@ function parseExcelWorkbook(wb){{
   const r15={{}}; [4,6,8,10,12,14,16,18,20,22,24,28,30,32].forEach(c=>r15[c]=cv(wsMain,priceRow,c));
   const dayC=[4,6,8,10,12,14,16,18], dn=['周一','周二','周三','周四','周五','周六','周日'];
   const daily=[]; for(let i=0;i<7;i++) daily.push({{n:dn[i],t:cv(wsMain,dailyStart+0,dayC[i])||0,f:cv(wsMain,dailyStart+1,dayC[i])||0,a:(cv(wsMain,dailyStart+2,dayC[i])||0)*100,y:(cv(wsMain,dailyStart+3,dayC[i])||0)*100,c:(cv(wsMain,dailyStart+6,dayC[i])||0)*100,v:Math.round(cv(wsMain,dailyStart+7,dayC[i])||0),tk:cv(wsMain,dailyStart+8,dayC[i])||0,at:cv(wsMain,dailyStart+9,dayC[i])||0}});
-  const catC={{'14':'鞋','16':'服','18':'器配','4':'男','6':'女','8':'童'}}; const catData={{}};
+  const catC={{'14':'鞋','16':'服','18':'器配','4':'男','6':'女','10':'童'}}; const catData={{}};
   for(const[col,nm]of Object.entries(catC)){{ 
     const cn=parseInt(col); 
     const isProduct=cn>=14; // cols 14/16/18 = product group
     const f=cv(wsMain,cateStart+1,cn)||0; 
     const ss=cv(wsMain,cateStart+12,cn)||0; 
-    catData[nm]={{flow:f,qty:cv(wsMain,cateStart+2,cn)||0,disc:(cv(wsMain,cateStart+3,cn)||0)*100,yoy:(cv(wsMain,cateStart+7,cn)||0)*100,mom:(cv(wsMain,cateStart+5,cn)||0)*100,f_share:(cv(wsMain,cateStart+9,cn)||0)*100,group:isProduct?'product':'gender'}};
-    if(isProduct){{ 
-      catData[nm].sku_s=ss;
-      catData[nm].s_qty=cv(wsMain,cateStart+17,cn)||0;
-      catData[nm].s_sku=cv(wsMain,cateStart+18,cn)||0;
-      catData[nm].sku_u=(cv(wsMain,cateStart+15,cn)||0)*100;
-      catData[nm].sat=(cv(wsMain,cateStart+21,cn)||0)*100;
-      catData[nm].st=(cv(wsMain,cateStart+22,cn)||0)*100;
-    }}
+    catData[nm]={{flow:f,qty:cv(wsMain,cateStart+2,cn)||0,disc:(cv(wsMain,cateStart+3,cn)||0)*100,yoy:(cv(wsMain,cateStart+7,cn)||0)*100,mom:(cv(wsMain,cateStart+5,cn)||0)*100,f_share:(cv(wsMain,cateStart+9,cn)||0)*100,group:isProduct?'product':'gender',sku_s:ss,s_qty:cv(wsMain,cateStart+17,cn)||0,s_sku:cv(wsMain,cateStart+18,cn)||0,sku_u:(cv(wsMain,cateStart+15,cn)||0)*100,sat:(cv(wsMain,cateStart+21,cn)||0)*100,st:(cv(wsMain,cateStart+22,cn)||0)*100}};
   }}
   const tsq=Object.values(catData).filter(c=>c.group==='product').reduce((s,c)=>s+(c.s_qty||0),0);
   for(const[nm,cd]of Object.entries(catData)){{ if(cd.group!=='product') continue; const sqs=tsq>0?(cd.s_qty/tsq*100):0,fs=cd.f_share; cd.s_q_share=sqs; cd.gap=fs-sqs; cd.match_lbl=Math.abs(fs-sqs)<=5?'匹配':(fs>sqs?'销>库+'+((fs-sqs).toFixed(1))+'pp':'库>销'+((sqs-fs).toFixed(1))+'pp'); }}
