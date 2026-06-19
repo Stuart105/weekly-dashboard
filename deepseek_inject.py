@@ -112,39 +112,46 @@ function renderAnalysis(el){{
 '''
 
 # Inject the JS code: replace old renderAnalysis with new one
-# Find the old renderAnalysis function and replace it
-old_render = re.search(r'function renderAnalysis\(el\)\{.*?\n\}', html, re.DOTALL)
-if old_render:
-    # Replace old renderAnalysis + add API code before it
-    # Add the API constants and callDeepSeek before renderAnalysis
-    insert_point = html.find('function renderAnalysis(')
+# Use brace counting to find function boundaries
+old_render_start = html.find('\nfunction renderAnalysis(el){')
+new_render_start = html.find('\n// ─── INIT')
+
+if old_render_start > 0 and new_render_start > old_render_start:
+    old_render_end = new_render_start
+    # Build the complete new JS: preserve code before + inject new code + preserve code after INIT
+    before = html[:old_render_start]
+    after = html[old_render_start:]  # includes old function + everything after
     
-    # Insert API code before renderAnalysis
-    before = html[:insert_point]
-    after = html[insert_point:]
-    
-    # Remove old renderAnalysis (find where it ends)
-    # Find the matching closing brace
-    depth = 0
-    end_pos = insert_point
-    for i in range(insert_point, len(after)):
-        c = after[i]
-        if c == '{':
-            depth += 1
-        elif c == '}':
-            depth -= 1
-            if depth == 0:
-                end_pos = insert_point + i + 1
-                break
-    
-    old_func = after[:end_pos - insert_point]
-    new_html = before + inject_js + after[end_pos - insert_point:]
-    
-    with open(HTML_FILE, 'w', encoding='utf-8') as f:
-        f.write(new_html)
-    
-    print(f"✅ DeepSeek JS 注入成功")
-    print(f"   API Key: {api_key[:12]}...")
-    print(f"   原函数被替换: {len(old_func)} bytes → {len(inject_js)} bytes")
+    # Remove old function by finding the next top-level function declaration or comment
+    # after the function's closing brace
+    search_start = after.find('function renderAnalysis(el){')  # start of the func body
+    if search_start >= 0:
+        # Count braces to find the matching closing brace
+        depth = 0
+        func_end = search_start
+        for i in range(search_start, len(after)):
+            c = after[i]
+            if c == '{': depth += 1
+            elif c == '}':
+                depth -= 1
+                if depth == 0:
+                    func_end = i + 1  # include the closing brace
+                    break
+        
+        if func_end > search_start:
+            after = after[:search_start] + inject_js + after[func_end:]
+            html = before + after
+        else:
+            # fallback: just append
+            html = html + '\n' + inject_js
+    else:
+        html = html + '\n' + inject_js
 else:
-    print("⚠️  未找到 renderAnalysis 函数，跳过注入")
+    # No old renderAnalysis found, just append
+    html = html + '\n' + inject_js
+
+with open(HTML_FILE, 'w', encoding='utf-8') as f:
+    f.write(html)
+
+print(f"✅ DeepSeek JS 注入成功")
+print(f"   API Key: {api_key[:12]}...")
