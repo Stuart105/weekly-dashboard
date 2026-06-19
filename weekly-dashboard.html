@@ -846,7 +846,7 @@ function analyzeOpportunities(d,m){
 
 // DeepSeek AI 实时分析 - 独立JS文件，避免f-string转义问题
 // 通过本地代理服务器调用API，避免浏览器CORS/网络限制
-const DEEPSEEK_MODEL = 'deepseek-v4-flash';
+const DEEPSEEK_MODEL = 'deepseek-v4-pro';
 
 function callDeepSeek(prompt, callback) {
   fetch('/api/deepseek', {
