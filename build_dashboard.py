@@ -826,22 +826,9 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
 <!-- ─── SECTION 3: SMART ANALYSIS ─── -->
 <div class="section">
   <h3>🤖 智能分析</h3>
-  <div class="tabs">
-    <button class="tab active" onclick="switchAnalysisTab('problems',this)">🔴 关键问题</button>
-    <button class="tab" onclick="switchAnalysisTab('opps',this)">🟢 改善机会</button>
-    <button class="tab" onclick="switchAnalysisTab('fulltext',this)">📝 完整分析稿</button>
-  </div>
-
-  <div id="tab-problems" class="analysis-tab" style="display:block">
-    <!-- JS dynamic renderAnalysis() 动态填充 -->
-  </div>
-
-  <div id="tab-opps" class="analysis-tab" style="display:none">
-    <!-- JS dynamic renderAnalysis() 动态填充 -->
-  </div>
-
-  <div id="tab-fulltext" class="analysis-tab" style="display:none">
-    <div class="full-text" id="fullTextContent"></div>
+  <button class="btn btn-primary" onclick="renderAnalysis()" style="margin-bottom:12px">📊 开始分析</button>
+  <div id="tab-fulltext">
+    <div class="full-text" id="fullTextContent" style="color:var(--sub);font-size:13px">点击「开始分析」按钮生成分析报告。</div>
   </div>
 </div>
 
@@ -863,13 +850,6 @@ function switchDataTab(name, el) {{
   if(name==='cate'){{ drawCateCharts(); }}
   if(name==='seas'){{ drawSeasCharts(); }}
   if(name==='mid'){{ drawMidCharts(); }}
-}}
-
-function switchAnalysisTab(name, el) {{
-  document.querySelectorAll('.analysis-tab').forEach(e=>e.style.display='none');
-  document.getElementById('tab-'+name).style.display='block';
-  document.querySelectorAll('.section:last-of-type .tab').forEach(t=>t.classList.remove('active'));
-  if(el) el.classList.add('active');
 }}
 
 function toggleCard(el) {{
@@ -1164,7 +1144,7 @@ function handleFileImport(e){{
       document.querySelector('.header .meta').textContent=DATA.store+' | '+DATA.week_range;
       document.querySelector('.header h1').textContent='📊 '+DATA.period+' 周报分析仪表板';
       document.title=DATA.period+' 周报分析仪表板 | '+DATA.store;
-      buildKpiStrip(); initTables(); refreshAllCharts(); renderAnalysis();
+      buildKpiStrip(); initTables(); refreshAllCharts();
       document.querySelectorAll('.data-tab').forEach(e=>e.style.display='none');
       document.getElementById('tab-daily').style.display='block';
       const tabs=document.querySelectorAll('.section:first-of-type .tab');
@@ -1318,11 +1298,8 @@ function analyzeOpportunities(d,m){{
 }}
 
 function renderAnalysis(){{
-  const D=DATA,m=computeDerivedMetrics(D),ps=analyzeProblems(D,m),os=analyzeOpportunities(D,m);
-  let ph=''; ps.forEach((p,i)=>{{ph+='<div class="pc'+(i<2?' open':'')+'" onclick="toggleCard(this)"><div class="phead"><span class="pnum">'+(i+1)+'</span><h4>'+p.title+'</h4><span class="toggle-icon">▶</span></div>'+(p.loss?'<div class="pbody"><span class="loss-tag">'+p.loss+'</span>':'<div class="pbody">')+(p.data?'<div class="dbox">'+p.data+'</div>':'')+(p.cause?'<b>根因：</b>'+p.cause:'')+'</div></div>';}});
-  document.getElementById('tab-problems').innerHTML=ph;
-  let oh=''; os.forEach((o,i)=>{{oh+='<div class="oc" onclick="toggleCard(this)"><div class="ohead"><span class="onum">'+(i+1)+'</span><h4>'+o.title+'</h4><span class="toggle-icon">▶</span></div><div class="obody">'+o.body+'</div></div>';}});
-  document.getElementById('tab-opps').innerHTML=oh;
+  const D=DATA;
+  document.getElementById('fullTextContent').innerHTML=FULL_TEXT;
 }}
 
 function buildKpiStrip(){{
@@ -1354,7 +1331,6 @@ function buildKpiStrip(){{
 window.addEventListener('DOMContentLoaded',()=>{{
   initTables();
   drawDailyCharts();
-  renderAnalysis();
 }});
 </script>
 </body>
