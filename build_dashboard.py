@@ -532,52 +532,174 @@ avg_t_analysis = f"客单价{avg_t_dir}主要受连带率{attach_dir}影响" if 
 achieve_assessment = "达成率表面达标但增长质量堪忧" if achieve_v >= 100 else "达成率偏低需重点关注"
 flow_conv_analysis = "客流增长但成交率下降—'进店不买'问题突出" if flow_yoy > 0 and conv_yoy < 0 else "客流与成交率同步波动"
 
-# ───────── Dynamic FULL_TEXT ─────────
-ytd_parts = []
-for cn in ['鞋','服','器配']:
-    if cn in cat_data:
-        ytd_parts.append(f'{cn}¥{cat_data[cn]["flow"]/10000:.1f}万（同比{pct(cat_data[cn]["yoy"],1)}）')
+# ───────── 4× Analysis Variants ─────────
+# Different analytical angles for key assessment phrases
+_achieve_variants = [
+    f"达成率{pa(achieve_v,2)}，{'超目标' if achieve_v>=100 else '未达标'}¥{abs(actual_v-target_v)/10000:.1f}万。同比{pct(yoy_v,2)}，{'增长质量尚可' if yoy_v>10 else '增长乏力需关注' if yoy_v>0 else '下滑需警惕'}",
+    f"目标¥{target_v/10000:.1f}万，实绩¥{actual_v/10000:.1f}万，缺口¥{abs(actual_v-target_v)/10000:.1f}万。{achieve_assessment}。同比{pct(yoy_v,2)}、同店同比{pct(sssg_v,2)}",
+    f"本周流水¥{actual_v/10000:.1f}万（目标¥{target_v/10000:.1f}万），达成率{pa(achieve_v,2)}。同比{pct(yoy_v,2)}，{'跑赢去年' if yoy_v>5 else '跑输去年' if yoy_v<-5 else '与去年持平'}",
+    f"核心指标：达成率{pa(achieve_v,2)}（目标¥{target_v/10000:.1f}万 → 实际¥{actual_v/10000:.1f}万），同比{pct(yoy_v,2)}，{'表现优于大盘' if yoy_v>15 else '跑输大盘' if yoy_v<0 else '基本持平'}",
+]
+_conv_variants = [
+    f"成交率{pa(conv_v,2)}（同比{pct(conv_yoy,1)}pp），日均客流{flow_v:.0f}人（同比{pct(flow_yoy,1)}）{flow_conv_analysis}",
+    f"客流{flow_v:.0f}人/天，成交率{pa(conv_v,2)}，{flow_conv_analysis}。周成交{tkt_cnt:.0f}笔",
+    f"进店转化率{pa(conv_v,2)}（同比{pct(conv_yoy,1)}pp），日均客流{flow_v:.0f}人、同比{pct(flow_yoy,1)}。{flow_conv_analysis}",
+    f"流量端：日均{flow_v:.0f}人（同比{pct(flow_yoy,1)}），成交率{pa(conv_v,2)}（同比{pct(conv_yoy,1)}pp），{'客流增长但转化不足' if flow_yoy>0 and conv_yoy<0 else '流量与转化同步波动'}",
+]
+_ticket_variants = [
+    f"客单价¥{avg_t:,.0f}（同比{pct(avg_t_yoy,1)}），连带率{f2(attach_r)}件（同比{pct(attach_yoy,1)}），件单价¥{unit_p:,.0f}（同比{pct(unit_yoy,1)}）。{avg_t_analysis}",
+    f"客单价¥{avg_t:,.0f}同比{pct(avg_t_yoy,1)}，连带率{f2(attach_r)}同比{pct(attach_yoy,1)}，件单价¥{unit_p:,.0f}同比{pct(unit_yoy,1)}。{avg_t_analysis}",
+    f"客单¥{avg_t:,.0f}（{pct(avg_t_yoy,1)}），连带{f2(attach_r)}（{pct(attach_yoy,1)}），件单¥{unit_p:,.0f}（{pct(unit_yoy,1)}）。{'连带驱动客单' if abs(attach_yoy) > abs(avg_t_yoy) else '件单价驱动客单'}为主因",
+    f"价格效率：客单价¥{avg_t:,.0f}（同比{pct(avg_t_yoy,1)}），连带率{f2(attach_r)}件（同比{pct(attach_yoy,1)}），件单价¥{unit_p:,.0f}（同比{pct(unit_yoy,1)}）。{avg_t_analysis}。提升连带是提高客单的关键抓手",
+]
+_shoe_variants = [
+    f"鞋类流水¥{cat_data['鞋']['flow']/10000:.1f}万，占比{pa(cat_data['鞋']['f_share'],1)}，同比{pct(cat_data['鞋']['yoy'],1)}。SKU动销率仅{pa(cat_data['鞋']['sku_u'],1)}，{cat_data['鞋']['sku_s']}个SKU中约{shoe_zero_pct:.0f}%一周0动销",
+    f"鞋类：¥{cat_data['鞋']['flow']/10000:.1f}万（占比{pa(cat_data['鞋']['f_share'],1)}，同比{pct(cat_data['鞋']['yoy'],1)}）。动销率{pa(cat_data['鞋']['sku_u'],1)}偏低，{'多款商品滞销需调整' if cat_data['鞋']['sku_u']<40 else '库存结构尚可'}",
+    f"鞋品类流水¥{cat_data['鞋']['flow']/10000:.1f}万、占比{pa(cat_data['鞋']['f_share'],1)}，同比增长{pct(cat_data['鞋']['yoy'],1)}。动销率仅{pa(cat_data['鞋']['sku_u'],1)}，大量SKU滞销亟待优化",
+    f"鞋业绩：¥{cat_data['鞋']['flow']/10000:.1f}万（+{cat_data['鞋']['yoy']:.1f}%），占比{pa(cat_data['鞋']['f_share'],1)}。问题在于动销率{pa(cat_data['鞋']['sku_u'],1)}过低，TOP款集中度过高",
+]
+_strategy_variants = [
+    f"""<b>二、本周重点改善策略</b>
 
-# Find pos yoy day
-pos_days = [(daily_rows[i]['n'], daily_rows[i]['y']) for i in range(7) if daily_rows[i]['y'] > 0]
-pos_day_str = ''
-for dn, dy in pos_days:
-    pos_day_str += f'{dn}同比正增{pct(dy,1)}、'
-pos_day_str = pos_day_str.rstrip('、')
+1、{worst_day["n"]}复苏：周五企微推送满399-30券，{worst_day["n"]}14-18点最强导购值守。目标达成80%+。
 
-FULL_TEXT_CONTENT = f'''<b>{period}周报分析稿</b> | {store} | {week_range}
+2、成交率抢救（{conv_v:.0f}%→{conv_v+4:.0f}%）：进店话术"欢迎光临今天新品到店"，试穿激励，收银台加价购。周增约¥{conv_lift_amt:,.0f}。
+
+3、SKU瘦身+爆款深耕：筛查2周0动销SKU调出，锁定TOP20鞋款加库存。目标动销率50%+。
+
+4、连带攻坚（{attach_r:.2f}→4.5件）："主推+搭配+连带"1+1+1法。周增约¥{(4.5-attach_r)*tkt_cnt*unit_p:,.0f}。
+
+5、折扣管控（{disc_v:.0f}%→{disc_v-2:.0f}%）：新品首2周正价保护，满减替代直降，鞋服折扣分治。""",
+    f"""<b>二、改善建议</b>
+
+❶ 周六定位：{worst_day["n"]}复苏攻坚，目标{pa(worst_day["a"],1)}→80%+，抢回¥{sat_loss:,.0f}损失。
+
+❷ 转化突围：成交率{conv_v:.0f}%→{conv_v+4:.0f}%，重点提升试穿率，预计周增量¥{conv_lift_amt:,.0f}。
+
+❸ 商品瘦身：鞋SKU动销率{cat_data['鞋']['sku_u']:.0f}%→50%+，0动销SKU果断清退。
+
+❹ 连带拉升：{attach_r:.2f}件→4.5件，推"1+1+1"搭配。增量¥{(4.5-attach_r)*tkt_cnt*unit_p:,.0f}。
+
+❺ 折扣优化：{disc_v:.0f}%→{disc_v-2:.0f}%，新品保护+满减替代直降。""",
+    f"""<b>二、三大攻坚方向</b>
+
+<u>方向一：流量转化</u>
+成交率{conv_v:.0f}%→{conv_v+4:.0f}%，导购进店三句话话术+试穿赠品。目标增量¥{conv_lift_amt:,.0f}。
+
+<u>方向二：商品效率</u>
+鞋SKU动销率{cat_data['鞋']['sku_u']:.0f}%→50%，TOP款加库存+动销款补货+滞销款清退。
+
+<u>方向三：客单提升</u>
+连带率{attach_r:.2f}件→4.5件，月增¥{(4.5-attach_r)*tkt_cnt*unit_p*4:,.0f}。折扣{pa(disc_v,1)}→{pa(disc_v-2,1)}控毛利。""",
+    f"""<b>二、关键战役</b>
+
+🎯 战役1 — {worst_day["n"]}逆袭
+{worst_day["n"]}达成率仅{pa(worst_day["a"],1)}，目标拉升到80%+。提前周五发券预热，当日14-18点王牌导购压阵。
+
+🎯 战役2 — 成交率攻坚
+{conv_v:.0f}%→{conv_v+4:.0f}%，进店率→试穿率→成交率三步漏斗优化。预计周增量¥{conv_lift_amt:,.0f}。
+
+🎯 战役3 — 商品结构革命
+鞋库存{cat_data['鞋']['s_qty']}件，动销率仅{cat_data['鞋']['sku_u']:.0f}%。清退0动销SKU，集中资源打TOP20爆款。""",
+]
+
+FULL_TEXT_VARIANTS = [
+    f'''<b>{period}周报分析（标准版）</b> | {store} | {week_range}
 
 <b>一、周分析</b>
 
-1、达成：本周目标¥{target_v/10000:.1f}万，实际¥{actual_v/10000:.1f}万，达成率{pa(achieve_v,2)}，{"超目标" if achieve_v>=100 else "未达标"}¥{abs(actual_v-target_v)/10000:.1f}万。但同比{pct(yoy_v,2)}，同店同比{pct(sssg_v,2)}，环比{pct(mom_v,2)}。{achieve_assessment}。
+1、达成：{_achieve_variants[0]}。
 
-2、成交率与客流：成交率{pa(conv_v,2)}（同比{pct(conv_yoy,1)}pp），日均客流{flow_v:.0f}人/天（同比{pct(flow_yoy,1)}），周客单量{tkt_cnt:.0f}笔。{flow_conv_analysis}。
+2、成交率与客流：{_conv_variants[0]}。
 
-3、客单价与连带：客单价¥{avg_t:,.0f}（同比{pct(avg_t_yoy,1)}），连带率{f2(attach_r)}件（同比{pct(attach_yoy,1)}），件单价¥{unit_p:,.0f}（同比{pct(unit_yoy,1)}）。{avg_t_analysis}。
+3、客单价与连带：{_ticket_variants[0]}。
 
-4、鞋类：流水¥{cat_data["鞋"]["flow"]/10000:.1f}万，占比{pa(cat_data["鞋"]["f_share"],1)}，同比{pct(cat_data["鞋"]["yoy"],1)}。SKU动销率仅{pa(cat_data["鞋"]["sku_u"],1)}，{cat_data["鞋"]["sku_s"]}个在售SKU中约{shoe_zero_pct:.0f}%一周0动销。
+4、{_shoe_variants[0]}。
 
-5、服装（按性别）：男¥{cat_data["男"]["flow"]/10000:.1f}万（同比{pct(cat_data["男"]["yoy"],1)}），女¥{cat_data["女"]["flow"]/10000:.1f}万（同比{pct(cat_data["女"]["yoy"],1)}），其中童装¥{cat_data["童"]["flow"]/10000:.1f}万。
+5、服装（按性别）：男¥{cat_data["男"]["flow"]/10000:.1f}万（同比{pct(cat_data["男"]["yoy"],1)}），女¥{cat_data["女"]["flow"]/10000:.1f}万（同比{pct(cat_data["女"]["yoy"],1)}），童装¥{cat_data["童"]["flow"]/10000:.1f}万。
 
-6、器配：¥{cat_data["器配"]["flow"]/10000:.1f}万（同比{pct(cat_data["器配"]["yoy"],1)}），{cat_data["器配"]["sku_s"]}个在售SKU中动销率{pa(cat_data["器配"]["sku_u"],1)}，每SKU产出{money(cat_data["器配"]["flow"]/cat_data["器配"]["sku_s"])}。
+6、器配：¥{cat_data["器配"]["flow"]/10000:.1f}万（同比{pct(cat_data["器配"]["yoy"],1)}），{cat_data["器配"]["sku_s"]}个SKU中动销率{pa(cat_data["器配"]["sku_u"],1)}，每SKU产出{money(cat_data["器配"]["flow"]/cat_data["器配"]["sku_s"])}。
 
-7、日别结构：周一¥{daily_rows[0]["f"]/10000:.1f}万（达成{pa(daily_rows[0]["a"],1)}）→ 周二¥{daily_rows[1]["f"]/10000:.1f}万 → 周三¥{daily_rows[2]["f"]/10000:.1f}万 → 周四¥{daily_rows[3]["f"]/10000:.1f}万 → 周五¥{daily_rows[4]["f"]/10000:.1f}万（同比{pct(daily_rows[4]["y"],1)}）→ <b>{worst_day["n"]}¥{worst_day["f"]/10000:.1f}万（达成{pa(worst_day["a"],1)}，全周最低）</b>→ {best_day["n"]}¥{best_day["f"]/10000:.1f}万（达成{pa(best_day["a"],1)}，全周最高）。
+7、日别：{daily_rows[0]["n"]}¥{daily_rows[0]["f"]/10000:.1f}万（达成{pa(daily_rows[0]["a"],1)}）→ {daily_rows[1]["n"]}¥{daily_rows[1]["f"]/10000:.1f}万 → {daily_rows[2]["n"]}¥{daily_rows[2]["f"]/10000:.1f}万 → {daily_rows[3]["n"]}¥{daily_rows[3]["f"]/10000:.1f}万 → {daily_rows[4]["n"]}¥{daily_rows[4]["f"]/10000:.1f}万 → <b>{worst_day["n"]}¥{worst_day["f"]/10000:.1f}万（最低）</b>→ {best_day["n"]}¥{best_day["f"]/10000:.1f}万（最高）。
 
-8、折扣率：{pa(disc_v,1)}（同比{disc_yoy_p:+.2f}pp、环比{disc_mom:+.2f}pp），约{disc_zhe:.1f}折。{disc_str}。
+8、折扣：{pa(disc_v,1)}（同比{disc_yoy_p:+.2f}pp），约{disc_zhe:.1f}折。{disc_str}。
 
-9、线上O2O：¥{o2o_v/10000:.2f}万（占比{pa(o2o_pct,1)}，环比{pct(o2o_mom,1)}），O2O是少数增长亮点。
+9、O2O：¥{o2o_v/10000:.2f}万（占比{pa(o2o_pct,1)}，环比{pct(o2o_mom,1)}），O2O持续增长。
 
-<b>二、本周重点改善策略</b>
+{_strategy_variants[0]}''',
+    f'''<b>{period}周报分析（问题导向版）</b> | {store} | {week_range}
 
-1、{worst_day["n"]}复苏：周五企微推送"{worst_day["n"]}满399-30"券，设"老带新"裂变，{worst_day["n"]}14-18点最强导购值守。目标{worst_day["n"]}达成80%+。
+<b>一、核心指标</b>
 
-2、成交率抢救（{conv_v:.0f}%→{conv_v+4:.0f}%）：进店三句话话术，试穿送袜子，收银台加价购。目标周增约¥{conv_lift_amt:,.0f}。
+📌 达成：{_achieve_variants[1]}。
 
-3、SKU瘦身+爆款深耕：筛查2周0动销SKU申请调出，锁定TOP20鞋款加库存深度。目标鞋动销率→50%+。
+📌 客流与成交：{_conv_variants[1]}。
 
-4、连带攻坚（{attach_r:.2f}→4.5件）："1+1+1"搭配法，跨界连带陈列，"连带王"即时奖。目标周增约¥{(4.5-attach_r)*tkt_cnt*unit_p:,.0f}。
+📌 价格效率：{_ticket_variants[1]}。
 
-5、折扣管控（{disc_v:.0f}%→{disc_v-2:.0f}%）：新品首2周正价保护，满减替代直降，品类折扣分治。'''
+📌 鞋类：{_shoe_variants[1]}。
+
+📌 服装分性别：男¥{cat_data["男"]["flow"]/10000:.1f}万（同比{pct(cat_data["男"]["yoy"],1)}）| 女¥{cat_data["女"]["flow"]/10000:.1f}万（同比{pct(cat_data["女"]["yoy"],1)}）| 童¥{cat_data["童"]["flow"]/10000:.1f}万。
+
+📌 器配流水¥{cat_data["器配"]["flow"]/10000:.1f}万（同比{pct(cat_data["器配"]["yoy"],1)}），动销率{pa(cat_data["器配"]["sku_u"],1)}。
+
+📌 周走势：{daily_rows[0]["n"]}¥{daily_rows[0]["f"]/10000:.1f}万 → {daily_rows[1]["n"]}¥{daily_rows[1]["f"]/10000:.1f}万 → {daily_rows[2]["n"]}¥{daily_rows[2]["f"]/10000:.1f}万 → {daily_rows[3]["n"]}¥{daily_rows[3]["f"]/10000:.1f}万 → {daily_rows[4]["n"]}¥{daily_rows[4]["f"]/10000:.1f}万 → ⚠️{worst_day["n"]}¥{worst_day["f"]/10000:.1f}万 → ✅{best_day["n"]}¥{best_day["f"]/10000:.1f}万。
+
+📌 折扣率{pa(disc_v,1)}（同比{disc_yoy_p:+.2f}pp），约{disc_zhe:.1f}折。{disc_str}。
+
+📌 O2O流水¥{o2o_v/10000:.2f}万（环比{pct(o2o_mom,1)}）。
+
+{_strategy_variants[1]}''',
+    f'''<b>{period}周报分析（机会导向版）</b> | {store} | {week_range}
+
+<b>一、数据透视</b>
+
+💡 目标达成：{_achieve_variants[2]}。
+
+💡 流量转化：{_conv_variants[2]}。
+
+💡 客单效率：{_ticket_variants[2]}。
+
+💡 鞋类表现：{_shoe_variants[2]}。
+
+💡 服装：男¥{cat_data["男"]["flow"]/10000:.1f}万（同比{pct(cat_data["男"]["yoy"],1)}）| 女¥{cat_data["女"]["flow"]/10000:.1f}万（同比{pct(cat_data["女"]["yoy"],1)}）| 童¥{cat_data["童"]["flow"]/10000:.1f}万。
+
+💡 器配：¥{cat_data["器配"]["flow"]/10000:.1f}万（同比{pct(cat_data["器配"]["yoy"],1)}），{cat_data["器配"]["sku_s"]}个SKU。
+
+💡 日别节奏：{daily_rows[0]["n"]}{pa(daily_rows[0]["a"],1)} → {daily_rows[1]["n"]}{pa(daily_rows[1]["a"],1)} → {daily_rows[3]["n"]}{pa(daily_rows[3]["a"],1)} ← 峰值。{worst_day["n"]}{pa(worst_day["a"],1)} ← 洼地。
+
+💡 折扣：{pa(disc_v,1)}→{disc_zhe:.1f}折，同比{disc_yoy_p:+.2f}pp，环比{disc_mom:+.2f}pp。
+
+💡 O2O：¥{o2o_v/10000:.2f}万（环比{pct(o2o_mom,1)}），{'占比持续提升' if o2o_pct>3 else '占比较低有提升空间'}。
+
+{_strategy_variants[2]}''',
+    f'''<b>{period}周报分析（数据深度版）</b> | {store} | {week_range}
+
+<b>一、经营诊断</b>
+
+📊 达成诊断：{_achieve_variants[3]}。
+
+📊 流量分析：{_conv_variants[3]}。
+
+📊 价格分析：{_ticket_variants[3]}。
+
+📊 鞋品类：{_shoe_variants[3]}。
+
+📊 服装：男¥{cat_data["男"]["flow"]/10000:.1f}万（同比{pct(cat_data["男"]["yoy"],1)}）| 女¥{cat_data["女"]["flow"]/10000:.1f}万（同比{pct(cat_data["女"]["yoy"],1)}）| 童¥{cat_data["童"]["flow"]/10000:.1f}万。
+
+📊 器配：¥{cat_data["器配"]["flow"]/10000:.1f}万（同比{pct(cat_data["器配"]["yoy"],1)}），每SKU产出{money(cat_data["器配"]["flow"]/cat_data["器配"]["sku_s"])}。
+
+📊 周走势：周一¥{daily_rows[0]["f"]/10000:.1f}万 → 周五¥{daily_rows[4]["f"]/10000:.1f}万 → <b>{worst_day["n"]}¥{worst_day["f"]/10000:.1f}万</b> → {best_day["n"]}¥{best_day["f"]/10000:.1f}万。周末客流集中但成交率偏低。
+
+📊 折扣策略：{pa(disc_v,1)}（同比{disc_yoy_p:+.2f}pp），约{disc_zhe:.1f}折。{disc_str}。
+
+📊 O2O：¥{o2o_v/10000:.2f}万（环比{pct(o2o_mom,1)}），{'可作为增长第二曲线' if o2o_mom>10 else '需加大推广力度'}。
+
+{_strategy_variants[3]}''',
+]
+
+# Embed as JS array
+FULL_TEXT_VARIANTS_JS = ',\n'.join(f'`{v}`' for v in FULL_TEXT_VARIANTS)
 
 # ───────── HTML generation ─────────
 html = f'''<!DOCTYPE html>
@@ -1119,7 +1241,7 @@ function refreshAllCharts() {{
 }}
 
 // Full text content
-const FULL_TEXT=`{FULL_TEXT_CONTENT}`;
+const FULL_TEXTS=[{FULL_TEXT_VARIANTS_JS}];
 
 // ─── IMPORT & PARSE EXCEL ───
 function showToast(msg,type){{
@@ -1302,10 +1424,11 @@ function renderAnalysis(el){{
   if(btn){{ btn.classList.add('loading'); btn.disabled=true; }}
   showToast('🔄 正在生成分析报告...','info');
   setTimeout(()=>{{
-    const D=DATA;
-    document.getElementById('fullTextContent').innerHTML=FULL_TEXT;
+    // Pick a random variant each time
+    const idx=Math.floor(Math.random()*FULL_TEXTS.length);
+    document.getElementById('fullTextContent').innerHTML=FULL_TEXTS[idx];
     if(btn){{ btn.classList.remove('loading'); btn.disabled=false; }}
-    showToast('✅ 分析完成','success');
+    showToast('✅ 分析完成（风格'+idx+')','success');
   }},500);
 }}
 
