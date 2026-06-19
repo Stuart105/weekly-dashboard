@@ -725,12 +725,12 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
 <div class="section">
   <h3>📊 数据筛选展示</h3>
   <div class="tabs">
-    <button class="tab active" onclick="switchDataTab('daily')">日别趋势</button>
-    <button class="tab" onclick="switchDataTab('matrix')">KPI矩阵</button>
-    <button class="tab" onclick="switchDataTab('cate')">品类分析</button>
-    <button class="tab" onclick="switchDataTab('seas')">新品季节</button>
-    <button class="tab" onclick="switchDataTab('mid')">中类分析</button>
-    <button class="tab" onclick="switchDataTab('sub')">子品类</button>
+    <button class="tab active" onclick="switchDataTab('daily',this)">日别趋势</button>
+    <button class="tab" onclick="switchDataTab('matrix',this)">KPI矩阵</button>
+    <button class="tab" onclick="switchDataTab('cate',this)">品类分析</button>
+    <button class="tab" onclick="switchDataTab('seas',this)">新品季节</button>
+    <button class="tab" onclick="switchDataTab('mid',this)">中类分析</button>
+    <button class="tab" onclick="switchDataTab('sub',this)">子品类</button>
   </div>
 
   <!-- DATA TAB CONTENTS -->
@@ -827,9 +827,9 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
 <div class="section">
   <h3>🤖 智能分析</h3>
   <div class="tabs">
-    <button class="tab active" onclick="switchAnalysisTab('problems')">🔴 关键问题 (6)</button>
-    <button class="tab" onclick="switchAnalysisTab('opps')">🟢 改善机会 (6)</button>
-    <button class="tab" onclick="switchAnalysisTab('fulltext')">📝 完整分析稿</button>
+    <button class="tab active" onclick="switchAnalysisTab('problems',this)">🔴 关键问题 (6)</button>
+    <button class="tab" onclick="switchAnalysisTab('opps',this)">🟢 改善机会 (6)</button>
+    <button class="tab" onclick="switchAnalysisTab('fulltext',this)">📝 完整分析稿</button>
   </div>
 
   <div id="tab-problems" class="analysis-tab" style="display:block">
@@ -867,25 +867,22 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
 const DATA = {json.dumps(payload, ensure_ascii=False, default=str)};
 
 // ─── TAB SWITCHING ───
-function switchDataTab(name) {{
+function switchDataTab(name, el) {{
   document.querySelectorAll('.data-tab').forEach(e=>e.style.display='none');
   document.getElementById('tab-'+name).style.display='block';
   document.querySelectorAll('.section:first-of-type .tab').forEach(t=>t.classList.remove('active'));
-  // Activate the clicked tab button (match by onclick attribute)
-  const btn=document.querySelector(`.section:first-of-type .tab[onclick*="'${{name}}'"]`);
-  if(btn) btn.classList.add('active');
+  if(el) el.classList.add('active');
   if(name==='daily'){{ drawDailyCharts(); }}
   if(name==='cate'){{ drawCateCharts(); }}
   if(name==='seas'){{ drawSeasCharts(); }}
   if(name==='mid'){{ drawMidCharts(); }}
 }}
 
-function switchAnalysisTab(name) {{
+function switchAnalysisTab(name, el) {{
   document.querySelectorAll('.analysis-tab').forEach(e=>e.style.display='none');
   document.getElementById('tab-'+name).style.display='block';
   document.querySelectorAll('.section:last-of-type .tab').forEach(t=>t.classList.remove('active'));
-  const btn=document.querySelector(`.section:last-of-type .tab[onclick*="'${{name}}'"]`);
-  if(btn) btn.classList.add('active');
+  if(el) el.classList.add('active');
 }}
 
 function toggleCard(el) {{
