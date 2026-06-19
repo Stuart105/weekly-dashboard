@@ -20,6 +20,7 @@ extracted_data.json
 # API Key 配置
 .env
 deepseek_config.json
+ai_analysis.json
 
 # 修复脚本（已合并到主文件）
 fix_season.js
