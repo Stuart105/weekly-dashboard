@@ -87,7 +87,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 
 /* Highlight box */
 .highlight{background:linear-gradient(135deg,#eff6ff,#dbeafe);border-radius:8px;padding:12px 16px;margin:10px 0;font-size:13px}
-.summary-box{background:linear-gradient(135deg,#0f172a,#1e293b);color:white;border-radius:12px;padding:20px 26px;margin-top:16px}
+/* (summary-box removed) */
 
 /* Full text */
 .full-text{background:#fafbfc;border-radius:8px;padding:18px 22px;font-size:13px;line-height:1.9;white-space:pre-wrap;max-height:60vh;overflow-y:auto}
@@ -245,9 +245,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 <div class="section">
   <h3>🤖 智能分析</h3>
   <div class="tabs">
-    <button class="tab active" onclick="switchAnalysisTab('problems',this)">🔴 关键问题 (6)</button>
-    <button class="tab" onclick="switchAnalysisTab('opps',this)">🟢 改善机会 (6)</button>
-    <button class="tab" onclick="switchAnalysisTab('ai',this)">🤖 AI 分析</button>
+    <button class="tab active" onclick="switchAnalysisTab('problems',this)">🔴 关键问题</button>
+    <button class="tab" onclick="switchAnalysisTab('opps',this)">🟢 改善机会</button>
     <button class="tab" onclick="switchAnalysisTab('fulltext',this)">📝 完整分析稿</button>
   </div>
 
@@ -262,19 +261,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
   <div id="tab-fulltext" class="analysis-tab" style="display:none">
     <div class="full-text" id="fullTextContent"></div>
   </div>
-</div>
-
-<!-- Summary - 由 JS renderAnalysis() 动态填充 -->
-<div class="summary-box">
-  <h3 style="color:#fbbf24;margin-bottom:12px;">总结：核心问题逻辑关系</h3>
-  <p style="font-size:13px;line-height:2;opacity:.9" id="summaryContent">
-    加载中...
-  </p>
-  <p style="font-size:14px;line-height:1.9;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.2)">
-    <strong style="color:#fca5a5;">三大失血点（客流 → 品类 → 效率）</strong>互为因果。<br>
-    破解之道：<strong style="color:#86efac;">引流 → SKU瘦身+深耕 → 连带攻坚 → 折扣优化 → 新品策略+O2O</strong><br>
-    六项措施联动落地，预计释放 <strong style="color:#fbbf24;">增量空间</strong>。
-  </p>
 </div>
 
 <div class="footer">奥莱店华南区城市 | W24 周报分析仪表板 | EdgeOne Pages 部署 | AI店长出品</div>
@@ -787,7 +773,6 @@ function renderAnalysis(){
   document.getElementById('tab-problems').innerHTML=ph;
   let oh=''; os.forEach((o,i)=>{oh+='<div class="oc" onclick="toggleCard(this)"><div class="ohead"><span class="onum">'+(i+1)+'</span><h4>'+o.title+'</h4><span class="toggle-icon">▶</span></div><div class="obody">'+o.body+'</div></div>';});
   document.getElementById('tab-opps').innerHTML=oh;
-  document.querySelector('.summary-box').innerHTML='<h3 style="color:#fbbf24;margin-bottom:12px;">总结：核心问题逻辑关系</h3><p style="font-size:13px;line-height:2;opacity:.9"><span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">同比'+D.yoy.toFixed(1)+'%</span>+<span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">周六达成'+m.satAchieve.toFixed(1)+'%</span>→客流端失血<br><span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">'+m.worstCat+' '+m.worstCatYoy.toFixed(1)+'%</span>+<span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">折扣'+D.disc.toFixed(1)+'%</span>→品类端失血<br><span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">客单'+D.avg_t_yoy.toFixed(1)+'%</span>+<span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">连带'+D.attach_yoy.toFixed(1)+'%</span>→效率端失血</p>';
 }
 
 function buildKpiStrip(){
@@ -822,16 +807,5 @@ window.addEventListener('DOMContentLoaded',()=>{
   renderAnalysis();
 });
 </script>
-
-
-  <!-- AI ANALYSIS TAB -->
-  <div id="tab-ai" class="analysis-tab" style="display:none">
-    <div class="section" style="margin-top:0">
-      <div style="background:linear-gradient(135deg,#667eea22,#764ba222);border-radius:12px;padding:16px;line-height:1.8;font-size:14px">
-        <div style="font-size:12px;color:#94a3b8;margin-bottom:8px">🤖 DeepSeek deepseek-v4-flash 生成</div>
-        【核心发现】<br>1. **业绩达成缺口明显，但同比增长强劲**：本周达成率86.8%，未达标（缺口约1.5万元），但同比增幅达22.5%，表明销售动能向好，但未能完全释放。<br>2. **成交率偏低，流量转化效率不足**：成交率仅18.0%，低于奥莱行业常见水平（25%-30%），日均客流151人相对稳定，但进店后购买转化存在明显瓶颈。<br>3. **高连带率与低客单价形成反差**：连带率高达4.48件，但客单价仅544元，叠加43.2%高折扣率，说明顾客倾向“多买低价品”，利润空间被严重挤压。<br><br>【改善建议】<br>1. **聚焦成交率提升，优化销售链路**：建议增设进门迎宾、导购主动推介爆品或限时优惠，同时加强员工话术训练，利用“搭配推荐”引导顾客从浏览转向购买，目标提升成交率至22%以上。<br>2. **调整折扣策略，提升客单价与毛利**：将部分热销款折扣从“直接打折”转为“满减”或“多件折上折”，例如“买3件享额外9折”，刺激连带销售同时提高单笔金额。同时控制低折扣品占比，减少35%以下折扣商品陈列。
-      </div>
-    </div>
-  </div>
 </body>
 </html>

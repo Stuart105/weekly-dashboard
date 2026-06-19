@@ -669,7 +669,7 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
 
 /* Highlight box */
 .highlight{{background:linear-gradient(135deg,#eff6ff,#dbeafe);border-radius:8px;padding:12px 16px;margin:10px 0;font-size:13px}}
-.summary-box{{background:linear-gradient(135deg,#0f172a,#1e293b);color:white;border-radius:12px;padding:20px 26px;margin-top:16px}}
+/* (summary-box removed) */
 
 /* Full text */
 .full-text{{background:#fafbfc;border-radius:8px;padding:18px 22px;font-size:13px;line-height:1.9;white-space:pre-wrap;max-height:60vh;overflow-y:auto}}
@@ -827,8 +827,8 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
 <div class="section">
   <h3>🤖 智能分析</h3>
   <div class="tabs">
-    <button class="tab active" onclick="switchAnalysisTab('problems',this)">🔴 关键问题 (6)</button>
-    <button class="tab" onclick="switchAnalysisTab('opps',this)">🟢 改善机会 (6)</button>
+    <button class="tab active" onclick="switchAnalysisTab('problems',this)">🔴 关键问题</button>
+    <button class="tab" onclick="switchAnalysisTab('opps',this)">🟢 改善机会</button>
     <button class="tab" onclick="switchAnalysisTab('fulltext',this)">📝 完整分析稿</button>
   </div>
 
@@ -843,19 +843,6 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
   <div id="tab-fulltext" class="analysis-tab" style="display:none">
     <div class="full-text" id="fullTextContent"></div>
   </div>
-</div>
-
-<!-- Summary - 由 JS renderAnalysis() 动态填充 -->
-<div class="summary-box">
-  <h3 style="color:#fbbf24;margin-bottom:12px;">总结：核心问题逻辑关系</h3>
-  <p style="font-size:13px;line-height:2;opacity:.9" id="summaryContent">
-    加载中...
-  </p>
-  <p style="font-size:14px;line-height:1.9;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.2)">
-    <strong style="color:#fca5a5;">三大失血点（客流 → 品类 → 效率）</strong>互为因果。<br>
-    破解之道：<strong style="color:#86efac;">引流 → SKU瘦身+深耕 → 连带攻坚 → 折扣优化 → 新品策略+O2O</strong><br>
-    六项措施联动落地，预计释放 <strong style="color:#fbbf24;">增量空间</strong>。
-  </p>
 </div>
 
 <div class="footer">{store} | {period} 周报分析仪表板 | EdgeOne Pages 部署 | AI店长出品</div>
@@ -1336,7 +1323,6 @@ function renderAnalysis(){{
   document.getElementById('tab-problems').innerHTML=ph;
   let oh=''; os.forEach((o,i)=>{{oh+='<div class="oc" onclick="toggleCard(this)"><div class="ohead"><span class="onum">'+(i+1)+'</span><h4>'+o.title+'</h4><span class="toggle-icon">▶</span></div><div class="obody">'+o.body+'</div></div>';}});
   document.getElementById('tab-opps').innerHTML=oh;
-  document.querySelector('.summary-box').innerHTML='<h3 style="color:#fbbf24;margin-bottom:12px;">总结：核心问题逻辑关系</h3><p style="font-size:13px;line-height:2;opacity:.9"><span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">同比'+D.yoy.toFixed(1)+'%</span>+<span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">周六达成'+m.satAchieve.toFixed(1)+'%</span>→客流端失血<br><span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">'+m.worstCat+' '+m.worstCatYoy.toFixed(1)+'%</span>+<span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">折扣'+D.disc.toFixed(1)+'%</span>→品类端失血<br><span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">客单'+D.avg_t_yoy.toFixed(1)+'%</span>+<span style="background:var(--red);padding:3px 12px;border-radius:20px;font-size:11px">连带'+D.attach_yoy.toFixed(1)+'%</span>→效率端失血</p>';
 }}
 
 function buildKpiStrip(){{
