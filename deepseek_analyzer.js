@@ -1,17 +1,11 @@
 // DeepSeek AI 实时分析 - 独立JS文件，避免f-string转义问题
-const DEEPSEEK_KEY_ENC = '__DEEPSEEK_KEY_B64__';
+// 通过本地代理服务器调用API，避免浏览器CORS/网络限制
 const DEEPSEEK_MODEL = 'deepseek-v4-flash';
 
 function callDeepSeek(prompt, callback) {
-  if (!DEEPSEEK_KEY_ENC || DEEPSEEK_KEY_ENC === '__DEEPSEEK_KEY_B64__') {
-    callback(null, '未配置API密钥');
-    return;
-  }
-  var key = atob(DEEPSEEK_KEY_ENC);
-  fetch('https://api.deepseek.com/v1/chat/completions', {
+  fetch('/api/deepseek', {
     method: 'POST',
     headers: {
-      'Authorization': 'Bearer ' + key,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
