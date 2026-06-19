@@ -872,7 +872,7 @@ function switchDataTab(name) {{
   document.getElementById('tab-'+name).style.display='block';
   document.querySelectorAll('.section:first-of-type .tab').forEach(t=>t.classList.remove('active'));
   // Activate the clicked tab button (match by onclick attribute)
-  const btn=document.querySelector(`.section:first-of-type .tab[onclick*="'${name}'"]`);
+  const btn=document.querySelector(`.section:first-of-type .tab[onclick*="'${{name}}'"]`);
   if(btn) btn.classList.add('active');
   if(name==='daily'){{ drawDailyCharts(); }}
   if(name==='cate'){{ drawCateCharts(); }}
@@ -884,7 +884,7 @@ function switchAnalysisTab(name) {{
   document.querySelectorAll('.analysis-tab').forEach(e=>e.style.display='none');
   document.getElementById('tab-'+name).style.display='block';
   document.querySelectorAll('.section:last-of-type .tab').forEach(t=>t.classList.remove('active'));
-  const btn=document.querySelector(`.section:last-of-type .tab[onclick*="'${name}'"]`);
+  const btn=document.querySelector(`.section:last-of-type .tab[onclick*="'${{name}}'"]`);
   if(btn) btn.classList.add('active');
 }}
 
