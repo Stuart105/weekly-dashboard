@@ -681,8 +681,10 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
 .toast.success{{background:var(--green)}}.toast.error{{background:var(--red)}}.toast.info{{background:var(--blue)}}
 .toast.show{{display:block}}
 @keyframes slideIn{{from{{transform:translateX(100%);opacity:0}}to{{transform:translateX(0);opacity:1}}}}
-.btn-primary.loading{{opacity:.7;pointer-events:none}}
-.btn-primary.loading::after{{content:'...';animation:dots 1s infinite}}
+.btn-primary.loading{{opacity:.7;pointer-events:none;position:relative;padding-left:36px}}
+.btn-primary.loading::before{{content:'';position:absolute;left:12px;top:50%;margin-top:-7px;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .6s linear infinite}}
+.btn-primary.loading::after{{content:'分析中...';position:relative}}
+@keyframes spin{{to{{transform:rotate(360deg)}}}}
 @keyframes dots{{0%,20%{{content:'.'}}40%{{content:'..'}}60%{{content:'...'}}80%,100%{{content:''}}}}
 </style>
 </head>
@@ -826,7 +828,7 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
 <!-- ─── SECTION 3: SMART ANALYSIS ─── -->
 <div class="section">
   <h3>🤖 智能分析</h3>
-  <button class="btn btn-primary" onclick="renderAnalysis()" style="margin-bottom:12px">📊 开始分析</button>
+  <button class="btn btn-primary" onclick="renderAnalysis(this)" style="margin-bottom:12px">📊 开始分析</button>
   <div id="tab-fulltext">
     <div class="full-text" id="fullTextContent" style="color:var(--sub);font-size:13px">点击「开始分析」按钮生成分析报告。</div>
   </div>
@@ -1297,9 +1299,16 @@ function analyzeOpportunities(d,m){{
   {{id:'o2o_boost',title:'O2O渠道发力 + 周日巩固',body:'<b>目标：</b>O2O从'+fm(d.o2o)+'提升至'+fm(8000)+'+<br><b>A — 周日维护：</b>周日流水'+fm(m.sunFlow)+'全周最强<br><b>B — PAD+官网同步：</b>线下畅销款标注线上同款<br><b>C — 周四模式复制：</b>周四达成'+m.thuAchive.toFixed(1)+'%复制到其他日'}}];
 }}
 
-function renderAnalysis(){{
-  const D=DATA;
-  document.getElementById('fullTextContent').innerHTML=FULL_TEXT;
+function renderAnalysis(el){{
+  const btn=el||document.querySelector('button[onclick*=\"renderAnalysis\"]');
+  if(btn){{ btn.classList.add('loading'); btn.disabled=true; }}
+  showToast('🔄 正在生成分析报告...','info');
+  setTimeout(()=>{{
+    const D=DATA;
+    document.getElementById('fullTextContent').innerHTML=FULL_TEXT;
+    if(btn){{ btn.classList.remove('loading'); btn.disabled=false; }}
+    showToast('✅ 分析完成','success');
+  }},500);
 }}
 
 function buildKpiStrip(){{
