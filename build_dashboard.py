@@ -240,7 +240,8 @@ _mid_metrics = [('流水','f','money'),('环比','mom','pct'),('SKU数','sku','n
 _mid_row_map = {'f':(32,59), 'mom':(36,63), 'sku':(43,70), 'stock_qty':(48,75), 'd':(34,61), 'su':(46,73)}
 
 mid_data = {}  # {name: {season_label: {f, mom, sku, stock_qty, d, su}}}
-mid_html = {}  # {name: html_table_string}
+mid_agg = {}   # {name: {f, mom, sku, stock_qty, d, su}} — aggregate totals
+_mid_names = ['男服','女服','男鞋','女鞋']
 for mname, base_row, season_cols in _mid_cats:
     is_shoe = base_row >= 55
     mcat_data = {}
@@ -257,13 +258,12 @@ for mname, base_row, season_cols in _mid_cats:
                         mentry[field] = int(float(v))
                     else:
                         mentry[field] = float(v)
-        if mentry.get('f', 0) > 0:  # only add if has flow
+        if mentry.get('f', 0) > 0:
             mcat_data[slab] = mentry
     mid_data[mname] = mcat_data
-    # Calculate aggregate: sum for 流水/SKU/库存, avg for 环比/折扣率/动销率
     entries = [e for e in mcat_data.values() if e.get('f', 0) > 0]
+    agg = {}
     if entries:
-        agg = {}
         for fk in ['f', 'sku', 'stock_qty']:
             agg[fk] = sum(e.get(fk, 0) for e in entries)
         for fk in ['mom', 'd', 'su']:
@@ -271,20 +271,25 @@ for mname, base_row, season_cols in _mid_cats:
             agg[fk] = sum(vals) / len(vals) if vals else 0
     else:
         agg = {fk: 0 for fk in ['f','sku','stock_qty','mom','d','su']}
-    # Build HTML table — single column showing aggregate
-    tbl = '<tr><th>指标</th><th>合计</th></tr>'
-    for nm, fk, typ in _mid_metrics:
-        v = agg.get(fk, 0)
+    mid_agg[mname] = agg
+
+# Build compact single table: 指标 | 男服 | 女服 | 男鞋 | 女鞋
+_mid_table_html = '<thead><tr><th>指标</th><th>男服</th><th>女服</th><th>男鞋</th><th>女鞋</th></tr></thead><tbody>'
+for nm, fk, typ in _mid_metrics:
+    _mid_table_html += f'<tr><td>{nm}</td>'
+    for mn in _mid_names:
+        v = mid_agg[mn].get(fk, 0)
         if typ == 'money':
-            tbl += f'<tr><td>{nm}</td><td>¥{v:,.0f}</td></tr>'
+            _mid_table_html += f'<td>¥{v:,.0f}</td>'
         elif typ == 'pct':
             cls = ' class="hi"' if v > 0 else ' class="lo"'
-            tbl += f'<tr><td>{nm}</td><td{cls}>{v:+.1f}%</td></tr>'
+            _mid_table_html += f'<td{cls}>{v:+.1f}%</td>'
         elif typ == 'pct_abs':
-            tbl += f'<tr><td>{nm}</td><td>{v:.1f}%</td></tr>'
+            _mid_table_html += f'<td>{v:.1f}%</td>'
         else:
-            tbl += f'<tr><td>{nm}</td><td>{v:,.0f}</td></tr>'
-    mid_html[mname] = tbl
+            _mid_table_html += f'<td>{v:,.0f}</td>'
+    _mid_table_html += '</tr>'
+_mid_table_html += '</tbody>'
 
 # Member extraction
 member_rows = []
@@ -365,6 +370,7 @@ payload = {
     'shoe_s_qty': cat_data['鞋']['s_qty'],
     'shoe_s_sku': cat_data['鞋']['s_sku'],
     'mtd': mtd_data, 'ytd': ytd_data, 'reg': reg_data,
+    'mid_agg': mid_agg,
 }
 
 # ───────── Dynamic analysis text variables ─────────
@@ -784,34 +790,13 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
 
   <!-- ─── MID-CATEGORY TAB ─── -->
   <div id="tab-mid" class="data-tab" style="display:none">
-    <div class="grid2" style="margin-bottom:14px;gap:16px">
-      <div>
-        <h4 style="font-size:14px;margin-bottom:8px;color:var(--blue)">👔 男服 合计</h4>
-        <table class="tbl" style="width:100%">
-          <tbody>{mid_html.get('男服','')}</tbody>
-        </table>
-      </div>
-      <div>
-        <h4 style="font-size:14px;margin-bottom:8px;color:var(--purple)">👗 女服 合计</h4>
-        <table class="tbl" style="width:100%">
-          <tbody>{mid_html.get('女服','')}</tbody>
-        </table>
-      </div>
+    <div class="grid2">
+      <div class="chart-wrap"><canvas id="chartMidCloth"></canvas></div>
+      <div class="chart-wrap"><canvas id="chartMidShoe"></canvas></div>
     </div>
-    <div class="grid2" style="gap:16px">
-      <div>
-        <h4 style="font-size:14px;margin-bottom:8px;color:var(--blue)">👞 男鞋 合计</h4>
-        <table class="tbl" style="width:100%">
-          <tbody>{mid_html.get('男鞋','')}</tbody>
-        </table>
-      </div>
-      <div>
-        <h4 style="font-size:14px;margin-bottom:8px;color:var(--purple)">👠 女鞋 合计</h4>
-        <table class="tbl" style="width:100%">
-          <tbody>{mid_html.get('女鞋','')}</tbody>
-        </table>
-      </div>
-    </div>
+    <table class="tbl" style="margin-top:12px;width:100%">
+      {_mid_table_html}
+    </table>
   </div>
 
   <div id="tab-sub" class="data-tab" style="display:none">
@@ -891,6 +876,7 @@ function switchDataTab(name) {{
   if(name==='daily'){{ drawDailyCharts(); }}
   if(name==='cate'){{ drawCateCharts(); }}
   if(name==='seas'){{ drawSeasCharts(); }}
+  if(name==='mid'){{ drawMidCharts(); }}
 }}
 
 function switchAnalysisTab(name) {{
@@ -1127,12 +1113,49 @@ function drawSeasCharts() {{
   }});
 }}
 
+function drawMidCharts() {{
+  const D=DATA, ma=D.mid_agg;
+  if(!ma) return;
+  const colors=window.chartColors||{{blue:'#3b82f6',blueBg:'#dbeafe',red:'#ef4444',redBg:'#fee2e2',purple:'#8b5cf6',purpleBg:'#ede9fe',amber:'#f59e0b',gray:'#94a3b8'}};
+  // Chart 1: 服 — 男服 vs 女服 (流水=柱, 库存=线)
+  const cLabels=['男服','女服'];
+  const cFlows=cLabels.map(n=>ma[n]?.f||0);
+  const cStocks=cLabels.map(n=>ma[n]?.stock_qty||0);
+  destroyChart('chartMidCloth');
+  chartInstances.chartMidCloth = new Chart(document.getElementById('chartMidCloth'),{{
+    type:'bar', data:{{ labels:cLabels, datasets:[
+      {{ label:'流水', data:cFlows, backgroundColor:[colors.blueBg,colors.purpleBg], borderColor:[colors.blue,colors.purple], borderWidth:1.5, borderRadius:4, yAxisID:'y' }},
+      {{ label:'库存量', data:cStocks, type:'line', borderColor:colors.amber, backgroundColor:'transparent', pointRadius:5, pointBackgroundColor:colors.amber, tension:0.3, borderWidth:2.5, yAxisID:'y1' }}
+    ]}},
+    options:{{ responsive:true, maintainAspectRatio:false,
+      plugins:{{ title:{{display:true,text:'服类 — 流水 vs 库存',font:{{size:14}}}}, legend:{{position:'bottom'}} }},
+      scales:{{ y:{{ position:'left',ticks:{{ callback:v=>'¥'+v.toLocaleString()}} }}, y1:{{ position:'right',ticks:{{ callback:v=>v.toLocaleString()}},grid:{{drawOnChartArea:false}} }} }}
+    }}
+  }});
+  // Chart 2: 鞋 — 男鞋 vs 女鞋 (流水=柱, 库存=线)
+  const sLabels=['男鞋','女鞋'];
+  const sFlows=sLabels.map(n=>ma[n]?.f||0);
+  const sStocks=sLabels.map(n=>ma[n]?.stock_qty||0);
+  destroyChart('chartMidShoe');
+  chartInstances.chartMidShoe = new Chart(document.getElementById('chartMidShoe'),{{
+    type:'bar', data:{{ labels:sLabels, datasets:[
+      {{ label:'流水', data:sFlows, backgroundColor:[colors.redBg,colors.amber+'40'], borderColor:[colors.red,colors.amber], borderWidth:1.5, borderRadius:4, yAxisID:'y' }},
+      {{ label:'库存量', data:sStocks, type:'line', borderColor:colors.purple, backgroundColor:'transparent', pointRadius:5, pointBackgroundColor:colors.purple, tension:0.3, borderWidth:2.5, yAxisID:'y1' }}
+    ]}},
+    options:{{ responsive:true, maintainAspectRatio:false,
+      plugins:{{ title:{{display:true,text:'鞋类 — 流水 vs 库存',font:{{size:14}}}}, legend:{{position:'bottom'}} }},
+      scales:{{ y:{{ position:'left',ticks:{{ callback:v=>'¥'+v.toLocaleString()}} }}, y1:{{ position:'right',ticks:{{ callback:v=>v.toLocaleString()}},grid:{{drawOnChartArea:false}} }} }}
+    }}
+  }});
+}}
+
 function refreshAllCharts() {{
   Object.keys(chartInstances).forEach(k=>{{chartInstances[k].destroy();delete chartInstances[k];}});
   drawDailyCharts();
   const activeTab=document.querySelector('.data-tab[style*="block"]');
   if(activeTab&&activeTab.id==='tab-cate')drawCateCharts();
   if(activeTab&&activeTab.id==='tab-seas')drawSeasCharts();
+  if(activeTab&&activeTab.id==='tab-mid')drawMidCharts();
 }}
 
 // Full text content
