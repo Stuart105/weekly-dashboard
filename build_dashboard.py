@@ -147,6 +147,7 @@ for rk in ['92','94','95','96','99','100','102','103','104']:
         label = rd['label']
         if label and data.get('8'):
             sub_ps_rows.append({'n':label,'f':float(data['8']),'d':float(data['10'])*100,'q':int(float(data['4'])),'isAcc':False})
+sub_ps_rows.sort(key=lambda x: x['f'], reverse=True)  # 流水倒序
 
 # Shoe series  
 shoe_rows = []
@@ -156,12 +157,13 @@ for rk in ['76','77','78','79','80','85','87']:
         label = rd['label']
         if label and data.get('8'):
             shoe_rows.append({'n':label,'f':float(data['8']),'q':int(float(data['4'])),'d':float(data['10'])*100})
+shoe_rows.sort(key=lambda x: x['f'], reverse=True)  # 流水倒序
 
-# Acc sub-PS
+# Acc sub-PS (uses accessory_sub section, rows 115-120)
 acc_rows = []
 for rk in ['115','116','117','120']:
-    if rk in d['sub_ps']:
-        rd = d['sub_ps'][rk]; data = rd['data']
+    if rk in d['accessory_sub']:
+        rd = d['accessory_sub'][rk]; data = rd['data']
         label = rd['label']
         if label and data.get('8'):
             sub_ps_rows.append({'n':label,'f':float(data['8']),'d':float(data['10'])*100,'q':int(float(data['4'])),'isAcc':True})
@@ -869,7 +871,9 @@ function switchDataTab(name) {{
   document.querySelectorAll('.data-tab').forEach(e=>e.style.display='none');
   document.getElementById('tab-'+name).style.display='block';
   document.querySelectorAll('.section:first-of-type .tab').forEach(t=>t.classList.remove('active'));
-  event.target.classList.add('active');
+  // Activate the clicked tab button (match by onclick attribute)
+  const btn=document.querySelector(`.section:first-of-type .tab[onclick*="'${name}'"]`);
+  if(btn) btn.classList.add('active');
   if(name==='daily'){{ drawDailyCharts(); }}
   if(name==='cate'){{ drawCateCharts(); }}
   if(name==='seas'){{ drawSeasCharts(); }}
@@ -880,7 +884,8 @@ function switchAnalysisTab(name) {{
   document.querySelectorAll('.analysis-tab').forEach(e=>e.style.display='none');
   document.getElementById('tab-'+name).style.display='block';
   document.querySelectorAll('.section:last-of-type .tab').forEach(t=>t.classList.remove('active'));
-  event.target.classList.add('active');
+  const btn=document.querySelector(`.section:last-of-type .tab[onclick*="'${name}'"]`);
+  if(btn) btn.classList.add('active');
 }}
 
 function toggleCard(el) {{
