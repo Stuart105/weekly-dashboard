@@ -743,7 +743,7 @@ function computeDerivedMetrics(d){
   const w=(d.category['鞋']?d.category['鞋'].flow:0);
   const shoePS=w/(d.category['鞋']?d.category['鞋'].sku_s:1);
   const accPS=(d.category['器配']?d.category['器配'].flow:0)/(d.category['器配']?d.category['器配'].sku_s:1);
-  const cs=Object.entries(d.category).sort((a,b)=>a[1].yoy-b[1].yoy);
+  const cs=Object.entries(d.category).filter(([n,c])=>c.group==='product').sort((a,b)=>a[1].yoy-b[1].yoy);
   const wc=cs[0]?cs[0][0]:'--',wy=cs[0]?cs[0][1].yoy:0;
   const sat=d.daily[5];
   return{shoePerSku:shoePS,accPerSku:accPS,worstCat:wc,worstCatYoy:wy,
@@ -751,7 +751,7 @@ function computeDerivedMetrics(d){
     ticketGap:(600-d.avg_t)*d.tkt_cnt,attachGap:(4.5-d.attach_r)*d.tkt_cnt*d.unit_p,
     satAchieve:sat.a,satFlow:sat.f,satTarget:sat.t,satVisitors:sat.v,satTicket:sat.tk,satAttach:sat.at,
     sunFlow:d.daily[6].f,thuAchive:d.daily[3].a,thuTicket:d.daily[3].tk,thuAttach:d.daily[3].at,
-    allCatsDown:Object.values(d.category).every(c=>c.yoy<-15),
+    allCatsDown:Object.values(d.category).filter(c=>c.group==='product').every(c=>c.yoy<-15),
     discountSpiral:d.disc>40&&d.mom<-10&&d.disc_mom>0,
     lowConvHighFlow:d.conv<20&&d.flow_yoy>0,
     ticketAttachBothDown:d.avg_t_yoy<-10&&d.attach_yoy<-10};
@@ -765,7 +765,7 @@ function analyzeProblems(d,m){
   if(m.satAchieve<60) ps.push({id:'sat_crash',severity:'high',title:'周六崩盘 — 达成率仅'+m.satAchieve.toFixed(1)+'%，单日损失 '+fm(m.satGap),loss:'预估损失 ≈ '+fm(m.satGap),data:'周六目标 '+fm(m.satTarget)+' → 实际 <b style="color:#ef4444">'+fm(m.satFlow)+'</b> | 达成 <b style="color:#ef4444">'+m.satAchieve.toFixed(1)+'%</b><br>客流量 '+m.satVisitors+'人（不及周日'+d.daily[6].v+'人的'+(m.satVisitors/d.daily[6].v*100).toFixed(0)+'%）| 客单价 '+fm(m.satTicket)+' | 连带率 '+m.satAttach.toFixed(2),cause:'目标'+m.satTarget/m.satTarget.toFixed(1)+'倍于平日目标过高；客流仅'+m.satVisitors+'人不足；客单价/连带率均低于周四峰值'});
   if(m.allCatsDown) ps.push({id:'category_all_down',severity:'high',title:'所有品类同比全面下挫 — '+m.worstCat+' '+m.worstCatYoy.toFixed(1)+'%最严重',loss:'四品类无一幸免',data:Object.entries(d.category).map(([n,cd])=>n+' '+(cd.yoy>0?'+':'')+cd.yoy.toFixed(1)+'%（折扣'+cd.disc.toFixed(1)+'%）').join(' | '),cause:(d.category['鞋']?d.category['鞋'].sku_u:0)<40?'鞋SKU动销率仅'+(d.category['鞋']?d.category['鞋'].sku_u.toFixed(1):'--')+'%大量SKU躺平':''});
   if(m.ticketAttachBothDown) ps.push({id:'ticket_attach_down',severity:'medium',title:'客单价与连带率双降 — 低客单低效率驱动',loss:'若客单价恢复至¥600周增量≈'+fm(m.ticketGap),data:'客单价 '+(d.avg_t_yoy>0?'+':'')+d.avg_t_yoy.toFixed(1)+'% | 连带率 '+(d.attach_yoy>0?'+':'')+d.attach_yoy.toFixed(1)+'% | 件单价 '+(d.unit_yoy>0?'+':'')+d.unit_yoy.toFixed(1)+'% → 客单价下降主因是连带效率下降',cause:'每笔少卖约'+(d.attach_r*(1-Math.abs(d.attach_yoy/100))-d.attach_r).toFixed(1)+'件导购推荐能力下降'});
-  if(m.discountSpiral) ps.push({id:'discount_spiral',severity:'medium',title:'折扣率'+d.disc.toFixed(1)+'%持续走高 — 越打折越卖不动',loss:'折扣率环比'+(d.disc_mom>0?'+':'')+d.disc_mom.toFixed(1)+'pp但流水环比'+(d.mom>0?'+':'')+d.mom.toFixed(1)+'%',data:'综合折扣'+d.disc.toFixed(1)+'%（约'+d.disc/10+(d.disc/10).toFixed(1)+'折）| 同比'+(d.disc_yoy_p>0?'+':'')+d.disc_yoy_p.toFixed(1)+'pp | 环比'+(d.disc_mom>0?'+':'')+d.disc_mom.toFixed(1)+'pp',cause:'折扣加深→流水反降→继续加深折扣的恶性循环'});
+  if(m.discountSpiral) ps.push({id:'discount_spiral',severity:'medium',title:'折扣率'+d.disc.toFixed(1)+'%持续走高 — 越打折越卖不动',loss:'折扣率环比'+(d.disc_mom>0?'+':'')+d.disc_mom.toFixed(1)+'pp但流水环比'+(d.mom>0?'+':'')+d.mom.toFixed(1)+'%',data:'综合折扣'+d.disc.toFixed(1)+'%（约'+((100-d.disc)/10).toFixed(1)+'折）| 同比'+(d.disc_yoy_p>0?'+':'')+d.disc_yoy_p.toFixed(1)+'pp | 环比'+(d.disc_mom>0?'+':'')+d.disc_mom.toFixed(1)+'pp',cause:'折扣加深→流水反降→继续加深折扣的恶性循环'});
   if(ps.length===0) ps.push({id:'no_issue',severity:'low',title:'未检测到严重问题',loss:'',data:'本周各项指标均在合理范围内',cause:''});
   return ps;
 }
