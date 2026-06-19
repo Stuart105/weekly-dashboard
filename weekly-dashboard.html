@@ -210,11 +210,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 
   <!-- ─── MID-CATEGORY TAB ─── -->
   <div id="tab-mid" class="data-tab" style="display:none">
-    <div class="grid2">
-      <div class="chart-wrap"><canvas id="chartMidCloth"></canvas></div>
-      <div class="chart-wrap"><canvas id="chartMidShoe"></canvas></div>
-    </div>
-    <table class="tbl" style="margin-top:12px;width:100%">
+    <div class="chart-wrap" style="margin-bottom:12px"><canvas id="chartMidCloth"></canvas></div>
+    <table class="tbl" style="width:100%">
       <thead><tr><th>指标</th><th>男服</th><th>女服</th><th>男鞋</th><th>女鞋</th></tr></thead><tbody><tr><td>流水</td><td>¥30,060</td><td>¥9,694</td><td>¥34,242</td><td>¥14,496</td></tr><tr><td>环比</td><td class="hi">+9.1%</td><td class="hi">+27.2%</td><td class="lo">-5.3%</td><td class="hi">+7.9%</td></tr><tr><td>SKU数</td><td>172</td><td>72</td><td>73</td><td>31</td></tr><tr><td>库存量</td><td>6,648</td><td>3,668</td><td>3,391</td><td>1,644</td></tr><tr><td>折扣率</td><td>55.3%</td><td>52.2%</td><td>49.4%</td><td>42.8%</td></tr><tr><td>动销率</td><td>47.1%</td><td>52.9%</td><td>37.8%</td><td>32.0%</td></tr></tbody>
     </table>
   </div>
@@ -537,36 +534,30 @@ function drawMidCharts() {
   const D=DATA, ma=D.mid_agg;
   if(!ma) return;
   const colors=window.chartColors||{blue:'#3b82f6',blueBg:'#dbeafe',red:'#ef4444',redBg:'#fee2e2',purple:'#8b5cf6',purpleBg:'#ede9fe',amber:'#f59e0b',gray:'#94a3b8'};
-  // Chart 1: 服 — 男服 vs 女服 (流水=柱, 库存=线)
-  const cLabels=['男服','女服'];
-  const cFlows=cLabels.map(n=>ma[n]?.f||0);
-  const cStocks=cLabels.map(n=>ma[n]?.stock_qty||0);
-  destroyChart('chartMidCloth');
+  // 四中类 流水占比 vs 库存占比
+  const cats=['男服','女服','男鞋','女鞋'];
+  const flows=cats.map(n=>ma[n]?.f||0);
+  const stocks=cats.map(n=>ma[n]?.stock_qty||0);
+  const totalFlow=flows.reduce((a,b)=>a+b,0);
+  const totalStock=stocks.reduce((a,b)=>a+b,0);
+  const flowShares=flows.map(f=>totalFlow?f/totalFlow*100:0);
+  const stockShares=stocks.map(s=>totalStock?s/totalStock*100:0);
+  const barColors=[colors.blueBg,colors.purpleBg,colors.redBg,colors.amber+'40'];
+  const borderColors=[colors.blue,colors.purple,colors.red,colors.amber];
+  destroyChart('chartMidCloth'); // reuse first canvas
   chartInstances.chartMidCloth = new Chart(document.getElementById('chartMidCloth'),{
-    type:'bar', data:{ labels:cLabels, datasets:[
-      { label:'流水', data:cFlows, backgroundColor:[colors.blueBg,colors.purpleBg], borderColor:[colors.blue,colors.purple], borderWidth:1.5, borderRadius:4, yAxisID:'y' },
-      { label:'库存量', data:cStocks, type:'line', borderColor:colors.amber, backgroundColor:'transparent', pointRadius:5, pointBackgroundColor:colors.amber, tension:0.3, borderWidth:2.5, yAxisID:'y1' }
+    type:'bar', data:{ labels:cats, datasets:[
+      { label:'流水占比', data:flowShares, backgroundColor:barColors, borderColor:borderColors, borderWidth:1.5, borderRadius:4 },
+      { label:'库存占比', data:stockShares, type:'line', borderColor:'#059669', backgroundColor:'transparent', pointRadius:6, pointBackgroundColor:'#059669', tension:0.3, borderWidth:3 }
     ]},
     options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ title:{display:true,text:'服类 — 流水 vs 库存',font:{size:14}}, legend:{position:'bottom'} },
-      scales:{ y:{ position:'left',ticks:{ callback:v=>'¥'+v.toLocaleString()} }, y1:{ position:'right',ticks:{ callback:v=>v.toLocaleString()},grid:{drawOnChartArea:false} } }
+      plugins:{ title:{display:true,text:'四中类 流水占比 vs 库存占比',font:{size:14}}, legend:{position:'bottom'} },
+      scales:{ y:{ ticks:{ callback:v=>v.toFixed(1)+'%'}, max:60 } }
     }
   });
-  // Chart 2: 鞋 — 男鞋 vs 女鞋 (流水=柱, 库存=线)
-  const sLabels=['男鞋','女鞋'];
-  const sFlows=sLabels.map(n=>ma[n]?.f||0);
-  const sStocks=sLabels.map(n=>ma[n]?.stock_qty||0);
-  destroyChart('chartMidShoe');
-  chartInstances.chartMidShoe = new Chart(document.getElementById('chartMidShoe'),{
-    type:'bar', data:{ labels:sLabels, datasets:[
-      { label:'流水', data:sFlows, backgroundColor:[colors.redBg,colors.amber+'40'], borderColor:[colors.red,colors.amber], borderWidth:1.5, borderRadius:4, yAxisID:'y' },
-      { label:'库存量', data:sStocks, type:'line', borderColor:colors.purple, backgroundColor:'transparent', pointRadius:5, pointBackgroundColor:colors.purple, tension:0.3, borderWidth:2.5, yAxisID:'y1' }
-    ]},
-    options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ title:{display:true,text:'鞋类 — 流水 vs 库存',font:{size:14}}, legend:{position:'bottom'} },
-      scales:{ y:{ position:'left',ticks:{ callback:v=>'¥'+v.toLocaleString()} }, y1:{ position:'right',ticks:{ callback:v=>v.toLocaleString()},grid:{drawOnChartArea:false} } }
-    }
-  });
+  // Hide second canvas (no longer needed)
+  const c2=document.getElementById('chartMidShoe');
+  if(c2) c2.style.display='none';
 }
 
 function refreshAllCharts() {
