@@ -844,44 +844,63 @@ function analyzeOpportunities(d,m){
   {id:'o2o_boost',title:'O2O渠道发力 + 周日巩固',body:'<b>目标：</b>O2O从'+fm(d.o2o)+'提升至'+fm(8000)+'+<br><b>A — 周日维护：</b>周日流水'+fm(m.sunFlow)+'全周最强<br><b>B — PAD+官网同步：</b>线下畅销款标注线上同款<br><b>C — 周四模式复制：</b>周四达成'+m.thuAchive.toFixed(1)+'%复制到其他日'}];
 }
 
+
+const DEEPSEEK_KEY_ENC=c2stMGU0NDM2NmQxZTI1NGFkMGE1YTg3OGIxZDc3OGJmYWU=;
+const DEEPSEEK_MODEL='deepseek-v4-flash';
+
+function callDeepSeek(prompt,callback){
+  if(!DEEPSEEK_KEY_ENC){ callback(null,'未配置API密钥'); return; }
+  const key=atob(DEEPSEEK_KEY_ENC);
+  fetch('https://api.deepseek.com/v1/chat/completions',{
+    method:'POST',
+    headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},
+    body:JSON.stringify({model:DEEPSEEK_MODEL,messages:[{role:'system',content:'你是一个零售数据分析专家，用专业简洁的中文分析门店数据。'},{role:'user',content:prompt}],temperature:0.7,max_tokens:2048})
+  }).then(r=>r.json()).then(d=>{if(d.choices&&d.choices[0]) callback(d.choices[0].message.content);else callback(null,'API异常: '+JSON.stringify(d));}).catch(e=>callback(null,'网络错误: '+e.message));
+}
+
 function renderAnalysis(el){
-  const btn=el||document.querySelector('button[onclick*="renderAnalysis"]');
-  if(btn){ btn.classList.add('loading'); btn.disabled=true; }
-  showToast('🔄 正在生成分析报告...','info');
-  setTimeout(()=>{
-    // Pick a random variant each time
-    const idx=Math.floor(Math.random()*FULL_TEXTS.length);
-    document.getElementById('fullTextContent').innerHTML=FULL_TEXTS[idx];
-    if(btn){ btn.classList.remove('loading'); btn.disabled=false; }
-    showToast('✅ 分析完成（风格'+idx+')','success');
-  },500);
-}
+  var D=DATA,btn=el||document.querySelector('button[onclick*="renderAnalysis"]');
+  if(btn){btn.classList.add('loading');btn.disabled=true;}
+  showToast('🔄 AI分析中...','info');
+  var p='请分析奥莱门店本周数据，给出核心发现3条和改善建议2条：';
+  p+='
+目标¥'+(D.target/10000).toFixed(1)+'万';
+  p+='
+实际¥'+(D.actual/10000).toFixed(1)+'万(达成'+D.achieve.toFixed(1)+'%)';
+  p+='
+同比'+(D.yoy>0?'+':'')+D.yoy.toFixed(1)+'% 环比'+(D.mom>0?'+':'')+D.mom.toFixed(1)+'%';
+  p+='
+客流'+D.flow.toFixed(0)+'人 成交率'+D.conv.toFixed(1)+'%';
+  p+='
+客单价¥'+D.avg_t.toFixed(0)+' 连带率'+D.attach_r.toFixed(1)+' 折扣'+D.disc.toFixed(1)+'%';
+  var c=D.category;
+  if(c&&c['鞋']){p+='
+鞋¥'+(c['鞋'].flow/10000).toFixed(1)+'万(同比'+(c['鞋'].yoy>0?'+':'')+c['鞋'].yoy.toFixed(1)+'%)';}
+  if(c&&c['服']){p+='
+服¥'+(c['服'].flow/10000).toFixed(1)+'万(同比'+(c['服'].yoy>0?'+':'')+c['服'].yoy.toFixed(1)+'%)';}
+  p+='
 
-function buildKpiStrip(){
-  const D=DATA, fmt=v=>v>=10000?((v/10000).toFixed(1)+'万'):('¥'+v.toFixed(0)), pc=v=>(v>0?'+':'')+v.toFixed(1)+'%', pa=v=>v.toFixed(1)+'%', cl=v=>v>=0?'up':'down', clA=v=>v>=100?'up':'down';
-  // Row 1
-  const h1=[];
-  h1.push('<div class="ki"><div class="kv">¥'+D.target.toLocaleString()+'</div><div class="kl">周目标</div><div class="kc neutral">周度目标</div></div>');
-  h1.push('<div class="ki"><div class="kv">¥'+D.actual.toLocaleString()+'</div><div class="kl">达成金额</div><div class="kc '+cl(D.yoy)+'">'+pc(D.yoy)+'</div></div>');
-  h1.push('<div class="ki"><div class="kv" style="color:'+(D.achieve>=100?'#22c55e':'#ef4444')+'">'+D.achieve.toFixed(1)+'%</div><div class="kl">达成率</div><div class="kc '+clA(D.achieve)+'">'+(D.achieve>=100?'超目标':'未达标')+'</div></div>');
-  h1.push('<div class="ki"><div class="kv" style="color:'+(D.yoy<0?'#ef4444':'#22c55e')+'">'+pc(D.yoy)+'</div><div class="kl">流水同比</div><div class="kc '+cl(D.yoy)+'">同比去年</div></div>');
-  h1.push('<div class="ki"><div class="kv" style="color:'+(D.sssg<0?'#ef4444':'#22c55e')+'">'+pc(D.sssg)+'</div><div class="kl">SSSG</div><div class="kc '+cl(D.sssg)+'">同店同比</div></div>');
-  h1.push('<div class="ki"><div class="kv" style="color:'+(D.mom<0?'#ef4444':'#22c55e')+'">'+pc(D.mom)+'</div><div class="kl">环比</div><div class="kc '+cl(D.mom)+'">较上周</div></div>');
-  h1.push('<div class="ki"><div class="kv">'+fmt(D.avg_t)+'</div><div class="kl">客单价</div><div class="kc '+cl(D.avg_t_yoy)+'">'+pc(D.avg_t_yoy)+'</div></div>');
-  h1.push('<div class="ki"><div class="kv">'+fmt(D.unit_p)+'</div><div class="kl">件单价</div><div class="kc '+cl(D.unit_yoy)+'">'+pc(D.unit_yoy)+'</div></div>');
-  h1.push('<div class="ki"><div class="kv">'+D.attach_r.toFixed(2)+'件</div><div class="kl">连带率</div><div class="kc '+cl(D.attach_yoy)+'">'+pc(D.attach_yoy)+'</div></div>');
-  h1.push('<div class="ki"><div class="kv">'+D.conv.toFixed(1)+'%</div><div class="kl">成交率</div><div class="kc '+cl(D.conv_yoy)+'">'+pa(D.conv_yoy)+'pp</div></div>');
-  document.getElementById('kpiStrip1').innerHTML=h1.join('');
-  // Row 2
-  const h2=[];
-  h2.push('<div class="ki"><div class="kv">'+D.flow.toFixed(0)+'人</div><div class="kl">日均客流</div><div class="kc '+cl(D.flow_yoy)+'">'+pc(D.flow_yoy)+'</div></div>');
-  h2.push('<div class="ki"><div class="kv">'+D.disc.toFixed(1)+'%</div><div class="kl">折扣率</div><div class="kc '+cl(D.disc_yoy_p)+'">'+pa(D.disc_yoy_p)+'pp</div></div>');
-  h2.push('<div class="ki"><div class="kv">'+fmt(D.o2o)+'</div><div class="kl">O2O</div><div class="kc '+cl(D.o2o_mom)+'">'+pc(D.o2o_mom)+'</div></div>');
-  let shoeYoy = D.category&&D.category['鞋']?D.category['鞋'].yoy:0;
-  h2.push('<div class="ki"><div class="kv">'+D.shoe_share.toFixed(1)+'%</div><div class="kl">鞋占比</div><div class="kc '+cl(shoeYoy)+'">'+pc(shoeYoy)+'</div></div>');
-  document.getElementById('kpiStrip2').innerHTML=h2.join('');
+格式：【核心发现】
+1.
+2.
+3.
+【改善建议】
+1.
+2.';
+  
+  callDeepSeek(p,function(r,err){
+    if(err){
+      var idx=Math.floor(Math.random()*FULL_TEXTS.length);
+      document.getElementById('fullTextContent').innerHTML='<div style="color:#94a3b8">⚠️ AI离线，使用本地分析</div>'+FULL_TEXTS[idx];
+      showToast('⚠️ AI离线','info');
+    }else{
+      document.getElementById('fullTextContent').innerHTML='<div style="font-size:12px;color:#6366f1;margin-bottom:8px">🤖 DeepSeek AI 实时生成</div>'+r.replace(/
+/g,'<br>').replace(/【([^】]+)】/g,'<br><b>【】</b>');
+      showToast('✅ AI分析完成','success');
+    }
+    if(btn){btn.classList.remove('loading');btn.disabled=false;}
+  });
 }
-
 // ─── INIT ───
 window.addEventListener('DOMContentLoaded',()=>{
   initTables();
