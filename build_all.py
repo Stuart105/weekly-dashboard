@@ -65,12 +65,10 @@ if html_file.exists() and ai_file.exists():
         "onclick=\"switchAnalysisTab('ai',this)\">🤖 AI 分析</button>\n    <button class=\"tab\" onclick=\"switchAnalysisTab('fulltext',this)"
     )
     
-    # Inject AI tab content before the closing </div> of the analysis section 
-    # Find "// ─── INIT ───" and inject before it
-    html = html.replace(
-        '// ─── INIT ───',
-        f'{ai_section}\n\n// ─── INIT ───'
-    )
+    # Inject AI tab content after the LAST </script> (main script, not CDN scripts)
+    last_script = html.rfind('</script>')
+    if last_script != -1:
+        html = html[:last_script] + '</script>' + f'\n\n{ai_section}' + html[last_script + len('</script>'):]
     
     with open(html_file, 'w', encoding='utf-8') as f:
         f.write(html)

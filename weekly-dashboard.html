@@ -247,6 +247,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
   <div class="tabs">
     <button class="tab active" onclick="switchAnalysisTab('problems',this)">🔴 关键问题 (6)</button>
     <button class="tab" onclick="switchAnalysisTab('opps',this)">🟢 改善机会 (6)</button>
+    <button class="tab" onclick="switchAnalysisTab('ai',this)">🤖 AI 分析</button>
     <button class="tab" onclick="switchAnalysisTab('fulltext',this)">📝 完整分析稿</button>
   </div>
 
@@ -821,5 +822,16 @@ window.addEventListener('DOMContentLoaded',()=>{
   renderAnalysis();
 });
 </script>
+
+
+  <!-- AI ANALYSIS TAB -->
+  <div id="tab-ai" class="analysis-tab" style="display:none">
+    <div class="section" style="margin-top:0">
+      <div style="background:linear-gradient(135deg,#667eea22,#764ba222);border-radius:12px;padding:16px;line-height:1.8;font-size:14px">
+        <div style="font-size:12px;color:#94a3b8;margin-bottom:8px">🤖 DeepSeek deepseek-v4-flash 生成</div>
+        【核心发现】<br>1. **业绩达成缺口明显，但同比增长强劲**：本周达成率86.8%，未达标（缺口约1.5万元），但同比增幅达22.5%，表明销售动能向好，但未能完全释放。<br>2. **成交率偏低，流量转化效率不足**：成交率仅18.0%，低于奥莱行业常见水平（25%-30%），日均客流151人相对稳定，但进店后购买转化存在明显瓶颈。<br>3. **高连带率与低客单价形成反差**：连带率高达4.48件，但客单价仅544元，叠加43.2%高折扣率，说明顾客倾向“多买低价品”，利润空间被严重挤压。<br><br>【改善建议】<br>1. **聚焦成交率提升，优化销售链路**：建议增设进门迎宾、导购主动推介爆品或限时优惠，同时加强员工话术训练，利用“搭配推荐”引导顾客从浏览转向购买，目标提升成交率至22%以上。<br>2. **调整折扣策略，提升客单价与毛利**：将部分热销款折扣从“直接打折”转为“满减”或“多件折上折”，例如“买3件享额外9折”，刺激连带销售同时提高单笔金额。同时控制低折扣品占比，减少35%以下折扣商品陈列。
+      </div>
+    </div>
+  </div>
 </body>
 </html>
