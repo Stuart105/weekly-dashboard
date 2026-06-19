@@ -940,8 +940,6 @@ function initTables() {{
   }});
   document.getElementById('benchTable').innerHTML=bt||'<tr><td colspan="8">导入后解析</td></tr>';
 
-  // Full text
-  document.getElementById('fullTextContent').innerHTML=`${{FULL_TEXT}}`;
 }}
 
 // ─── CHARTS ───
