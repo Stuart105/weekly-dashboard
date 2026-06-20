@@ -206,7 +206,7 @@ if '5' in seas:
 
 # Build season comparison HTML tables (服 vs 鞋, seasons as columns)
 # type: 'money' → ¥前缀 | 'pct' → %后缀+红绿色 | 'num' → 纯数字
-_seas_metrics = [('流水','f','money'),('环比','mom','pct'),('SKU数','sku','num'),('库存量','stock_qty','num'),('折扣率','d','pct_abs'),('动销率','su','pct_abs')]
+_seas_metrics = [('流水','f','money'),('销量','q','num'),('环比','mom','pct'),('SKU数','sku','num'),('库存量','stock_qty','num'),('折扣率','d','pct_abs'),('动销率','su','pct_abs')]
 _seas_keys = [('2025Q4及以前(服)','2025Q4及以前(鞋)'),('2026Q1(服)','2026Q1(鞋)'),('2026Q2(服)','2026Q2(鞋)'),('2026Q3+(服)','2026Q3+(鞋)'),('26年常青(服)','26年常青(鞋)')]
 def _sfmt(v, typ):
     if v is None: return '—', ''
@@ -237,9 +237,9 @@ _mid_cats = [
     ('男鞋', 55, [('25Q4','4'),('26Q1','6'),('26Q2','8'),('26Q3+','10'),('常青','13')]),
     ('女鞋', 55, [('25Q4','15'),('26Q1','18'),('26Q2','20'),('26Q3+','22'),('常青','25')]),
 ]
-_mid_metrics = [('流水','f','money'),('环比','mom','pct'),('SKU数','sku','num'),('库存量','stock_qty','num'),('折扣率','d','pct_abs'),('动销率','su','pct_abs')]
+_mid_metrics = [('流水','f','money'),('销量','qty','num'),('环比','mom','pct'),('SKU数','sku','num'),('库存量','stock_qty','num'),('折扣率','d','pct_abs'),('动销率','su','pct_abs')]
 # Metric row mapping: {field: (section2_row, section3_row)}
-_mid_row_map = {'f':(32,59), 'mom':(36,63), 'sku':(43,70), 'stock_qty':(48,75), 'd':(34,61), 'su':(46,73)}
+_mid_row_map = {'f':(32,59), 'qty':(33,60), 'mom':(36,63), 'sku':(43,70), 'stock_qty':(48,75), 'd':(34,61), 'su':(46,73)}
 
 mid_data = {}  # {name: {season_label: {f, mom, sku, stock_qty, d, su}}}
 mid_agg = {}   # {name: {f, mom, sku, stock_qty, d, su}} — aggregate totals
@@ -256,7 +256,7 @@ for mname, base_row, season_cols in _mid_cats:
                 if v is not None:
                     if field in ('mom', 'd', 'su'):
                         mentry[field] = float(v) * 100
-                    elif field in ('sku', 'stock_qty'):
+                    elif field in ('sku', 'stock_qty', 'qty'):
                         mentry[field] = int(float(v))
                     else:
                         mentry[field] = float(v)
@@ -266,13 +266,13 @@ for mname, base_row, season_cols in _mid_cats:
     entries = [e for e in mcat_data.values() if e.get('f', 0) > 0]
     agg = {}
     if entries:
-        for fk in ['f', 'sku', 'stock_qty']:
+        for fk in ['f', 'sku', 'stock_qty', 'qty']:
             agg[fk] = sum(e.get(fk, 0) for e in entries)
         for fk in ['mom', 'd', 'su']:
             vals = [e.get(fk, 0) for e in entries if e.get(fk) is not None]
             agg[fk] = sum(vals) / len(vals) if vals else 0
     else:
-        agg = {fk: 0 for fk in ['f','sku','stock_qty','mom','d','su']}
+        agg = {fk: 0 for fk in ['f','sku','stock_qty','qty','mom','d','su']}
     mid_agg[mname] = agg
 
 # Build compact single table: 指标 | 男服 | 女服 | 男鞋 | 女鞋
@@ -620,7 +620,7 @@ FULL_TEXT_VARIANTS = [
 
 6、器配：¥{cat_data["器配"]["flow"]/10000:.1f}万（同比{pct(cat_data["器配"]["yoy"],1)}），{cat_data["器配"]["sku_s"]}个SKU中动销率{pa(cat_data["器配"]["sku_u"],1)}，每SKU产出{money(cat_data["器配"]["flow"]/cat_data["器配"]["sku_s"])}。
 
-7、日别：{daily_rows[0]["n"]}¥{daily_rows[0]["f"]/10000:.1f}万（达成{pa(daily_rows[0]["a"],1)}）→ {daily_rows[1]["n"]}¥{daily_rows[1]["f"]/10000:.1f}万 → {daily_rows[2]["n"]}¥{daily_rows[2]["f"]/10000:.1f}万 → {daily_rows[3]["n"]}¥{daily_rows[3]["f"]/10000:.1f}万 → {daily_rows[4]["n"]}¥{daily_rows[4]["f"]/10000:.1f}万 → <b>{worst_day["n"]}¥{worst_day["f"]/10000:.1f}万（最低）</b>→ {best_day["n"]}¥{best_day["f"]/10000:.1f}万（最高）。
+7、日别：{daily_rows[0]["n"]}¥{daily_rows[0]["f"]/10000:.1f}万（达成{pa(daily_rows[0]["a"],1)}）→ {daily_rows[1]["n"]}¥{daily_rows[1]["f"]/10000:.1f}万 → {daily_rows[2]["n"]}¥{daily_rows[2]["f"]/10000:.1f}万 → {daily_rows[3]["n"]}¥{daily_rows[3]["f"]/10000:.1f}万 → {daily_rows[4]["n"]}¥{daily_rows[4]["f"]/10000:.1f}万 → <b>{worst_day["n"]}¥{worst_day["f"]/10000:.1f}万（达成率最低）</b>→ {best_day["n"]}¥{best_day["f"]/10000:.1f}万（达成率最高）。
 
 8、折扣：{pa(disc_v,1)}（同比{disc_yoy_p:+.2f}pp），约{disc_zhe:.1f}折。{disc_str}。
 
@@ -827,8 +827,8 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
 <!-- KPI STRIP - ROW 1 (10 cards) -->
 <div class="kpi-strip" id="kpiStrip1">
   <div class="ki"><div class="kv">¥{target_v:,.0f}</div><div class="kl">周目标</div><div class="kc neutral">周度目标</div></div>
-  <div class="ki"><div class="kv">¥{actual_v:,.0f}</div><div class="kl">达成金额</div><div class="kc {'up' if yoy_v>0 else 'down'}">{pct(yoy_v,1)}</div></div>
-  <div class="ki"><div class="kv" style="color:{'#22c55e' if achieve_v>=100 else '#ef4444'}">{pa(achieve_v,1)}</div><div class="kl">达成率</div><div class="kc {'up' if achieve_v>=100 else 'down'}">{'超目标' if achieve_v>=100 else '未达标'}</div></div>
+  <div class="ki"><div class="kv">¥{actual_v:,.0f}</div><div class="kl">达成金额</div><div class="kc {'up' if yoy_v>0 else 'down'}">较去年同期 {pct(yoy_v,1)}</div></div>
+  <div class="ki"><div class="kv" style="color:{'#22c55e' if achieve_v>=100 else '#ef4444'}">{pa(achieve_v,1)}</div><div class="kl">达成率</div><div class="kc" style="color:{'#22c55e' if achieve_v>=100 else '#ef4444'}">{'超目标' if achieve_v>=100 else '未达标'}</div></div>
   <div class="ki"><div class="kv" style="color:{'#ef4444' if yoy_v<0 else '#22c55e'}">{pct(yoy_v,1)}</div><div class="kl">流水同比</div><div class="kc {'up' if yoy_v>0 else 'down'}">同比去年</div></div>
   <div class="ki"><div class="kv" style="color:{'#ef4444' if sssg_v<0 else '#22c55e'}">{pct(sssg_v,1)}</div><div class="kl">SSSG</div><div class="kc {'up' if sssg_v>0 else 'down'}">同店同比</div></div>
   <div class="ki"><div class="kv" style="color:{'#ef4444' if mom_v<0 else '#22c55e'}">{pct(mom_v,1)}</div><div class="kl">环比</div><div class="kc {'up' if mom_v>0 else 'down'}">较上周</div></div>
@@ -886,7 +886,7 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
       <div class="chart-wrap"><canvas id="chartCateMatch"></canvas></div>
     </div>
     <table class="tbl" style="margin-top:14px">
-      <thead><tr><th>品类</th><th>流水</th><th>销售占比</th><th>同比</th><th>环比</th><th>折扣率</th><th>SKU在售</th><th>SKU动销率</th><th>库存数量</th><th>库存占比</th><th>匹配分析</th></tr></thead>
+      <thead><tr><th>品类</th><th>流水</th><th>销量</th><th>销售占比</th><th>同比</th><th>环比</th><th>折扣率</th><th>SKU在售</th><th>SKU动销率</th><th>库存数量</th><th>库存占比</th><th>匹配分析</th></tr></thead>
       <tbody id="cateTable"></tbody>
     </table>
   </div>
@@ -926,7 +926,7 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
     <div class="grid3">
       <div>
         <h4 style="font-size:13px;margin-bottom:8px;color:var(--sub)">服装子品类</h4>
-        <table class="tbl"><thead><tr><th>品类</th><th>流水</th><th>折扣</th></tr></thead><tbody id="subCloth"></tbody></table>
+        <table class="tbl"><thead><tr><th>品类</th><th>流水</th><th>销量</th><th>折扣</th></tr></thead><tbody id="subCloth"></tbody></table>
       </div>
       <div>
         <h4 style="font-size:13px;margin-bottom:8px;color:var(--sub)">鞋系列</h4>
@@ -934,7 +934,7 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
       </div>
       <div>
         <h4 style="font-size:13px;margin-bottom:8px;color:var(--sub)">配件子品类</h4>
-        <table class="tbl"><thead><tr><th>品类</th><th>流水</th><th>折扣</th></tr></thead><tbody id="subAcc"></tbody></table>
+        <table class="tbl"><thead><tr><th>品类</th><th>流水</th><th>销量</th><th>折扣</th></tr></thead><tbody id="subAcc"></tbody></table>
       </div>
     </div>
   </div>
@@ -995,7 +995,7 @@ function initTables() {{
   }});
   dt+=`<tr style="font-weight:700;background:#f1f5f9"><td>合计</td><td>¥${{D.target.toLocaleString()}}</td>
   <td>¥${{D.actual.toLocaleString()}}</td><td>${{D.achieve.toFixed(1)}}%</td>
-  <td class="lo">${{D.yoy.toFixed(1)}}%</td><td>${{D.conv.toFixed(2)}}%</td>
+  <td class="${{D.yoy>0?'hi':'lo'}}">${{D.yoy.toFixed(1)}}%</td><td>${{D.conv.toFixed(2)}}%</td>
   <td>${{D.flow.toFixed(0)}}</td><td>¥${{D.avg_t.toFixed(0)}}</td><td>${{D.attach_r.toFixed(2)}}</td></tr>`;
   document.getElementById('dailyTable').innerHTML=dt;
 
@@ -1012,18 +1012,18 @@ function initTables() {{
   for(const[cn,cd]of Object.entries(D.category)){{
     if(cd.group&&cd.group!==lastGroup){{
       const gname=cd.group==='product'?'📦 产品类别 (鞋/服/器配)':'👥 顾客性别 (男/女/童)';
-      ct+='<tr style="background:#e8edf3;font-weight:700"><td colspan="11" style="text-align:left;padding:7px 10px;font-size:13px">'+gname+'</td></tr>';
+      ct+='<tr style="background:#e8edf3;font-weight:700"><td colspan="12" style="text-align:left;padding:7px 10px;font-size:13px">'+gname+'</td></tr>';
       lastGroup=cd.group;
     }}
     if(cd.group==='product'){{
       const mcls=cd.gap>5?'hi':(cd.gap<-5?'lo':'');
-      ct+='<tr><td>'+cn+'</td><td>¥'+cd.flow.toLocaleString()+'</td><td>'+cd.f_share.toFixed(2)+'%</td>'
+      ct+='<tr><td>'+cn+'</td><td>¥'+cd.flow.toLocaleString()+'</td><td>'+(cd.qty?cd.qty.toLocaleString():'—')+'</td><td>'+cd.f_share.toFixed(2)+'%</td>'
         +'<td class="'+(cd.yoy>0?'hi':'lo')+'">'+(cd.yoy>0?'+':'')+cd.yoy.toFixed(2)+'%</td><td class="'+(cd.mom>0?'hi':'lo')+'">'+(cd.mom>0?'+':'')+cd.mom.toFixed(2)+'%</td>'
         +'<td>'+cd.disc.toFixed(2)+'%</td><td>'+cd.sku_s+'</td><td>'+(cd.sku_u&&cd.sku_u>0?cd.sku_u.toFixed(2)+'%':'—')+'</td>'
         +'<td>'+cd.s_qty.toLocaleString()+'</td><td>'+cd.s_q_share.toFixed(2)+'%</td><td class="'+mcls+'">'+cd.match_lbl+'</td></tr>';
     }}else{{
       const ycls=cd.yoy>0?'hi':'lo', mcls=cd.mom>0?'hi':'lo';
-      ct+='<tr><td>'+cn+'</td><td>¥'+cd.flow.toLocaleString()+'</td><td>'+cd.f_share.toFixed(2)+'%</td>'
+      ct+='<tr><td>'+cn+'</td><td>¥'+cd.flow.toLocaleString()+'</td><td>'+(cd.qty?cd.qty.toLocaleString():'—')+'</td><td>'+cd.f_share.toFixed(2)+'%</td>'
         +'<td class="'+ycls+'">'+(cd.yoy>0?'+':'')+cd.yoy.toFixed(2)+'%</td><td class="'+mcls+'">'+(cd.mom>0?'+':'')+cd.mom.toFixed(2)+'%</td>'
         +'<td>'+(cd.disc?cd.disc.toFixed(2)+'%':'—')+'</td><td>'+(cd.sku_s?cd.sku_s:'—')+'</td><td>'+(cd.sku_u&&cd.sku_u>0?cd.sku_u.toFixed(2)+'%':'—')+'</td>'
         +'<td>'+(cd.s_qty?cd.s_qty.toLocaleString():'—')+'</td><td colspan="2" style="color:#94a3b8;font-size:11px">（匹配分析仅产品维度）</td></tr>';
@@ -1036,11 +1036,11 @@ function initTables() {{
   document.getElementById('seasShoeTable').innerHTML='{shoe_seas_html}';
 
   // Sub tables
-  let sc=''; D.sub_ps.filter(r=>!r.isAcc).forEach(r=>{{ sc+='<tr><td>'+r.n+'</td><td>¥'+r.f.toLocaleString()+'</td><td>'+(r.d||0).toFixed(2)+'%</td></tr>'; }});
+  let sc=''; D.sub_ps.filter(r=>!r.isAcc).forEach(r=>{{ sc+='<tr><td>'+r.n+'</td><td>¥'+r.f.toLocaleString()+'</td><td>'+(r.q?r.q.toLocaleString():'—')+'</td><td>'+(r.d||0).toFixed(2)+'%</td></tr>'; }});
   document.getElementById('subCloth').innerHTML=sc;
   let ss=''; D.shoe.forEach(r=>{{ ss+='<tr><td>'+r.n+'</td><td>¥'+r.f.toLocaleString()+'</td><td>'+r.q+'</td><td>'+(r.d||0).toFixed(2)+'%</td></tr>'; }});
   document.getElementById('subShoe').innerHTML=ss||'<tr><td colspan="4">导入后解析</td></tr>';
-  let sa=''; D.sub_ps.filter(r=>r.isAcc).forEach(r=>{{ sa+='<tr><td>'+r.n+'</td><td>¥'+r.f.toLocaleString()+'</td><td>'+(r.d||0).toFixed(2)+'%</td></tr>'; }});
+  let sa=''; D.sub_ps.filter(r=>r.isAcc).forEach(r=>{{ sa+='<tr><td>'+r.n+'</td><td>¥'+r.f.toLocaleString()+'</td><td>'+(r.q?r.q.toLocaleString():'—')+'</td><td>'+(r.d||0).toFixed(2)+'%</td></tr>'; }});
   document.getElementById('subAcc').innerHTML=sa;
 
   // Bench table
@@ -1433,12 +1433,12 @@ function renderAnalysis(el){{
 }}
 
 function buildKpiStrip(){{
-  const D=DATA, fmt=v=>v>=10000?((v/10000).toFixed(1)+'万'):('¥'+v.toFixed(0)), pc=v=>(v>0?'+':'')+v.toFixed(1)+'%', pa=v=>v.toFixed(1)+'%', cl=v=>v>=0?'up':'down', clA=v=>v>=100?'up':'down';
+  const D=DATA, fmt=v=>v>=10000?((v/10000).toFixed(1)+'万'):('¥'+v.toFixed(0)), pc=v=>(v>0?'+':'')+v.toFixed(1)+'%', pa=v=>v.toFixed(1)+'%', cl=v=>v>=0?'up':'down';
   // Row 1
   const h1=[];
   h1.push('<div class="ki"><div class="kv">¥'+D.target.toLocaleString()+'</div><div class="kl">周目标</div><div class="kc neutral">周度目标</div></div>');
-  h1.push('<div class="ki"><div class="kv">¥'+D.actual.toLocaleString()+'</div><div class="kl">达成金额</div><div class="kc '+cl(D.yoy)+'">'+pc(D.yoy)+'</div></div>');
-  h1.push('<div class="ki"><div class="kv" style="color:'+(D.achieve>=100?'#22c55e':'#ef4444')+'">'+D.achieve.toFixed(1)+'%</div><div class="kl">达成率</div><div class="kc '+clA(D.achieve)+'">'+(D.achieve>=100?'超目标':'未达标')+'</div></div>');
+  h1.push('<div class="ki"><div class="kv">¥'+D.actual.toLocaleString()+'</div><div class="kl">达成金额</div><div class="kc '+cl(D.yoy)+'">较去年同期 '+pc(D.yoy)+'</div></div>');
+  h1.push('<div class="ki"><div class="kv" style="color:'+(D.achieve>=100?'#22c55e':'#ef4444')+'">'+D.achieve.toFixed(1)+'%</div><div class="kl">达成率</div><div class="kc" style="color:'+(D.achieve>=100?'#22c55e':'#ef4444')+'">'+(D.achieve>=100?'超目标':'未达标')+'</div></div>');
   h1.push('<div class="ki"><div class="kv" style="color:'+(D.yoy<0?'#ef4444':'#22c55e')+'">'+pc(D.yoy)+'</div><div class="kl">流水同比</div><div class="kc '+cl(D.yoy)+'">同比去年</div></div>');
   h1.push('<div class="ki"><div class="kv" style="color:'+(D.sssg<0?'#ef4444':'#22c55e')+'">'+pc(D.sssg)+'</div><div class="kl">SSSG</div><div class="kc '+cl(D.sssg)+'">同店同比</div></div>');
   h1.push('<div class="ki"><div class="kv" style="color:'+(D.mom<0?'#ef4444':'#22c55e')+'">'+pc(D.mom)+'</div><div class="kl">环比</div><div class="kc '+cl(D.mom)+'">较上周</div></div>');

@@ -36,7 +36,7 @@ function callDeepSeek(prompt, callback) {
 function renderAnalysis(el) {
   var btn = el || document.querySelector('button[onclick*="renderAnalysis"]');
   if (btn) { btn.classList.add('loading'); btn.disabled = true; }
-  showToast('🔄 AI正在深度分析（人货场+量化机会）...', 'info');
+  showToast('AI正在深度分析...', 'info');
   var D = DATA;
   var p = '';
 
@@ -217,23 +217,23 @@ function renderAnalysis(el) {
     if (err) {
       var idx = Math.floor(Math.random() * FULL_TEXTS.length);
       document.getElementById('fullTextContent').innerHTML =
-        '<div style="color:#94a3b8;font-size:12px;margin-bottom:8px">⚠️ AI离线，使用预制分析</div>' + FULL_TEXTS[idx];
-      showToast('⚠️ AI离线', 'info');
+        '<div style="color:#666;font-size:12px;margin-bottom:8px">AI离线，使用预制分析</div>' + FULL_TEXTS[idx];
+      showToast('AI离线', 'info');
     } else {
-      // 分段美化展示
+      // 分段展示 — 统一易读字体，带段落间距
       var html = result
         .replace(/\n/g, '<br>')
         .replace(/═══/g, '')
-        .replace(/【人—/g, '<br><br><b style="color:#6366f1">👤 【人—')
-        .replace(/【货—/g, '<br><br><b style="color:#f59e0b">📦 【货—')
-        .replace(/【场—/g, '<br><br><b style="color:#22c55e">🏪 【场—')
-        .replace(/【达成总览】/g, '<br><b style="color:#3b82f6">📊 【达成总览】</b>')
-        .replace(/【机会量化】/g, '<br><br><b style="color:#ef4444">💰 【机会量化】</b>')
-        .replace(/【改善建议】/g, '<br><br><b style="color:#8b5cf6">🎯 【改善建议】</b>');
+        .replace(/【人—/g, '<div style="margin-top:18px;margin-bottom:6px;padding-top:12px;border-top:1px solid #eee"><b style="font-size:14px">【人—')
+        .replace(/【货—/g, '<div style="margin-top:18px;margin-bottom:6px;padding-top:12px;border-top:1px solid #eee"><b style="font-size:14px">【货—')
+        .replace(/【场—/g, '<div style="margin-top:18px;margin-bottom:6px;padding-top:12px;border-top:1px solid #eee"><b style="font-size:14px">【场—')
+        .replace(/【达成总览】/g, '<b style="font-size:14px">【达成总览】</b>')
+        .replace(/【机会量化】/g, '<div style="margin-top:18px;margin-bottom:6px;padding-top:12px;border-top:1px solid #eee"><b style="font-size:14px">【机会量化】</b></div>')
+        .replace(/【改善建议】/g, '<div style="margin-top:18px;margin-bottom:6px;padding-top:12px;border-top:1px solid #eee"><b style="font-size:14px">【改善建议】</b></div>');
 
       document.getElementById('fullTextContent').innerHTML =
-        '<div style="font-size:12px;color:#6366f1;margin-bottom:12px;padding:8px 12px;background:#eef2ff;border-radius:6px">🤖 DeepSeek AI 实时生成 | 人货场框架 | ' + D.period + ' 周报分析</div>' + html;
-      showToast('✅ AI分析完成', 'success');
+        '<div style="font-size:12px;color:#333;margin-bottom:12px;padding:8px 12px;background:#f5f5f5;border-radius:6px;font-family:system-ui,sans-serif">AI 实时生成 | 人货场框架 | ' + D.period + ' 周报分析</div>' + html;
+      showToast('AI分析完成', 'success');
     }
     if (btn) { btn.classList.remove('loading'); btn.disabled = false; }
   });
