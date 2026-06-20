@@ -1,13 +1,15 @@
 // DeepSeek AI 实时分析 v2 — 人货场框架 + 大厂级分析深度
 const DEEPSEEK_MODEL = 'deepseek-v4-pro';
-// Worker 代理地址（部署 Cloudflare Worker 后替换）
-const API_PROXY = 'https://YOUR_WORKER.workers.dev';
+const DEEPSEEK_API_KEY = 'sk-0e44366d1e254ad0a5a878b1d778bfae';
 const SYSTEM_PROMPT = '你是一个在中国奥特莱斯零售行业有10年经验的门店运营专家。你精通：门店KPI诊断、品类管理、库存优化、导购绩效提升、折扣策略制定。分析时请遵循"人-货-场"三维框架：人（客流转化漏斗、人员效率）、货（品类健康度、SKU效率、新品表现、库存匹配）、场（日别节奏、折扣环境、对标差距）。请用专业但易懂的中文写作，直接给出数据和判断，不写客套话。每条分析控制在80-150字，必须包含具体数字支撑而非模糊描述。改善建议必须包含量化目标和可执行动作。';
 
 function callDeepSeek(prompt, callback) {
-  fetch(API_PROXY, {
+  fetch('https://api.deepseek.com/v1/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + DEEPSEEK_API_KEY
+    },
     body: JSON.stringify({
       model: DEEPSEEK_MODEL,
       messages: [
