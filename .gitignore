@@ -5,6 +5,7 @@
 _tmp_*/
 *.tmp
 *.log
+server.log
 
 # Python 缓存
 __pycache__/
@@ -14,14 +15,26 @@ __pycache__/
 # 沙箱测试
 sandbox_test/
 
-# 提取的数据（如果有敏感信息）
+# 敏感数据 — 绝不要提交
 extracted_data.json
-
-# API Key 配置
 .env
 deepseek_config.json
 ai_analysis.json
 
+# 构建产物（由 build_dashboard.py 生成，需在 git 中保留用于 EdgeOne 部署）
+# index.html — 保留，EdgeOne Pages 需要此文件作为入口
+
+# 旧版报告归档
+W23*/
+W24*
+
 # 修复脚本（已合并到主文件）
 fix_season.js
 fix_season.py
+
+# IDE
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
