@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Build single-page weekly report dashboard HTML."""
 import json, os, sys
+from datetime import datetime
 
 # Usage: python build_dashboard.py [data_directory]
 # If no argument, looks for extracted_data.json in current directory
@@ -956,7 +957,7 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
   </div>
 </div>
 
-<div class="footer">{store} | {period} 周报分析仪表板 | EdgeOne Pages 部署 | AI店长出品</div>
+<div class="footer">{store} | {period} 周报分析仪表板 | EdgeOne Pages 部署 | 构建: {datetime.now().strftime('%m-%d %H:%M')} | AI店长出品</div>
 
 </div>
 
