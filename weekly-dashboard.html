@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>W24 周报分析仪表板 | 奥莱店华南区城市 | v0620-2324</title>
+<title>W24 周报分析仪表板 | 奥莱店华南区城市 | v0620-2337</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -112,7 +112,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 <div class="toast" id="toast"></div>
 
 <div class="header">
-  <div><h1>📊 W24 周报分析仪表板 <span style="background:#ef4444;color:white;font-size:11px;padding:2px 8px;border-radius:4px;vertical-align:middle">v0620.2324</span></h1><div class="meta">奥莱店华南区城市 | 2026.06.08-06.14</div></div>
+  <div><h1>📊 W24 周报分析仪表板 <span style="background:#ef4444;color:white;font-size:11px;padding:2px 8px;border-radius:4px;vertical-align:middle">v0620.2337</span></h1><div class="meta">奥莱店华南区城市 | 2026.06.08-06.14</div></div>
   <div class="actions">
     <button class="btn btn-primary" id="btnImport" onclick="triggerImport()">📥 导入周报</button>
     <button class="btn btn-outline" onclick="refreshAllCharts()">🔄 刷新图表</button>
@@ -252,7 +252,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
   </div>
 </div>
 
-<div class="footer">奥莱店华南区城市 | W24 周报分析仪表板 | EdgeOne Pages 部署 | 构建: 06-20 23:24 | AI店长出品</div>
+<div class="footer">奥莱店华南区城市 | W24 周报分析仪表板 | EdgeOne Pages 部署 | 构建: 06-20 23:37 | AI店长出品</div>
 
 </div>
 
@@ -846,20 +846,16 @@ function analyzeOpportunities(d,m){
 
 // DeepSeek AI 实时分析 v2 — 人货场框架 + 大厂级分析深度
 const DEEPSEEK_MODEL = 'deepseek-v4-pro';
+const DEEPSEEK_API_KEY = 'sk-0e44366d1e254ad0a5a878b1d778bfae';
 const SYSTEM_PROMPT = '你是一个在中国奥特莱斯零售行业有10年经验的门店运营专家。你精通：门店KPI诊断、品类管理、库存优化、导购绩效提升、折扣策略制定。分析时请遵循"人-货-场"三维框架：人（客流转化漏斗、人员效率）、货（品类健康度、SKU效率、新品表现、库存匹配）、场（日别节奏、折扣环境、对标差距）。请用专业但易懂的中文写作，直接给出数据和判断，不写客套话。每条分析控制在80-150字，必须包含具体数字支撑而非模糊描述。改善建议必须包含量化目标和可执行动作。';
 
 function callDeepSeek(prompt, callback) {
-  // 从当前页面 URL 提取 EdgeOne 预览鉴权 token
-  var qs = new URLSearchParams(window.location.search);
-  var eoToken = qs.get('eo_token');
-  var eoTime = qs.get('eo_time');
-  var apiUrl = '/api/deepseek';
-  if (eoToken && eoTime) {
-    apiUrl += '?eo_token=' + encodeURIComponent(eoToken) + '&eo_time=' + encodeURIComponent(eoTime);
-  }
-  fetch(apiUrl, {
+  fetch('https://api.deepseek.com/v1/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + DEEPSEEK_API_KEY
+    },
     body: JSON.stringify({
       model: DEEPSEEK_MODEL,
       messages: [
