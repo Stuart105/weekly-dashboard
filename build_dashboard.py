@@ -1469,4 +1469,6 @@ window.addEventListener('DOMContentLoaded',()=>{{
 
 with open(f'{BASE}/weekly-dashboard.html', 'w', encoding='utf-8') as f:
     f.write(html)
+with open(f'{BASE}/index.html', 'w', encoding='utf-8') as f:
+    f.write(html)
 print(f"Dashboard built: {BASE}/weekly-dashboard.html ({len(html):,} bytes)")
