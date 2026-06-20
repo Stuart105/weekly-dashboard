@@ -708,7 +708,7 @@ html = f'''<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{period} 周报分析仪表板 | {store}</title>
+<title>{period} 周报分析仪表板 | {store} | v{datetime.now().strftime('%m%d-%H%M')}</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -817,7 +817,7 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
 <div class="toast" id="toast"></div>
 
 <div class="header">
-  <div><h1>📊 {period} 周报分析仪表板</h1><div class="meta">{store} | {week_range}</div></div>
+  <div><h1>📊 {period} 周报分析仪表板 <span style="background:#ef4444;color:white;font-size:11px;padding:2px 8px;border-radius:4px;vertical-align:middle">v{datetime.now().strftime('%m%d.%H%M')}</span></h1><div class="meta">{store} | {week_range}</div></div>
   <div class="actions">
     <button class="btn btn-primary" id="btnImport" onclick="triggerImport()">📥 导入周报</button>
     <button class="btn btn-outline" onclick="refreshAllCharts()">🔄 刷新图表</button>
