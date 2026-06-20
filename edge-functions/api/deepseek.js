@@ -1,5 +1,6 @@
 // EdgeOne Pages Edge Function — DeepSeek API 代理
 // 路由: POST /api/deepseek → 转发到 api.deepseek.com
+
 export async function onRequestPost(context) {
   const apiKey = context.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
@@ -36,8 +37,8 @@ export async function onRequestPost(context) {
   }
 }
 
-// 处理 CORS 预检请求
-export function onRequestOptions() {
+// 处理 CORS 预检
+export async function onRequestOptions() {
   return new Response(null, {
     status: 204,
     headers: {
@@ -45,5 +46,15 @@ export function onRequestOptions() {
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type'
     }
+  });
+}
+
+// 兜底：处理所有其他 HTTP 方法
+export async function onRequest(context) {
+  return new Response(JSON.stringify({ 
+    status: 'ok', 
+    message: 'DeepSeek proxy. Use POST method.' 
+  }), {
+    headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
   });
 }
