@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="favicon.ico" type="image/x-icon">
-<title>W24 周报分析仪表板 | 奥莱店华南区城市 | v0621-1004</title>
+<title>W24 周报分析仪表板 | 奥莱店华南区城市 | v0621-1019</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -113,7 +113,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 <div class="toast" id="toast"></div>
 
 <div class="header">
-  <div><h1>📊 W24 周报分析仪表板 <span style="background:#ef4444;color:white;font-size:11px;padding:2px 8px;border-radius:4px;vertical-align:middle">v0621.1004</span></h1><div class="meta">奥莱店华南区城市 | 2026.06.08-06.14</div></div>
+  <div><h1>📊 W24 周报分析仪表板 <span style="background:#ef4444;color:white;font-size:11px;padding:2px 8px;border-radius:4px;vertical-align:middle">v0621.1019</span></h1><div class="meta">奥莱店华南区城市 | 2026.06.08-06.14</div></div>
   <div class="actions">
     <button class="btn btn-primary" id="btnImport" onclick="triggerImport()">📥 导入周报</button>
     <button class="btn btn-outline" onclick="refreshAllCharts()">🔄 刷新图表</button>
@@ -253,7 +253,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
   </div>
 </div>
 
-<div class="footer">奥莱店华南区城市 | W24 周报分析仪表板 | EdgeOne Pages 部署 | 构建: 06-21 10:04 | AI店长出品</div>
+<div class="footer">奥莱店华南区城市 | W24 周报分析仪表板 | EdgeOne Pages 部署 | 构建: 06-21 10:19 | AI店长出品</div>
 
 </div>
 
@@ -748,19 +748,19 @@ function parseExcelWorkbook(wb){
   const r7={}; [4,5,6,7,8,10,12,14,17,20,22,24,28,33,35,36,37,39].forEach(c=>r7[c]=cv(wsMain,kpiRow,c));
   const r15={}; [4,6,8,10,12,14,16,18,20,22,24,28,30,32].forEach(c=>r15[c]=cv(wsMain,priceRow,c));
   const dayC=[4,6,8,10,12,14,16,18], dn=['周一','周二','周三','周四','周五','周六','周日'];
-  const daily=[]; for(let i=0;i<7;i++) daily.push({n:dn[i],t:cv(wsMain,dailyStart+0,dayC[i])||0,f:cv(wsMain,dailyStart+1,dayC[i])||0,a:(cv(wsMain,dailyStart+2,dayC[i])||0)*100,y:(cv(wsMain,dailyStart+3,dayC[i])||0)*100,c:(cv(wsMain,dailyStart+6,dayC[i])||0)*100,v:Math.round(cv(wsMain,dailyStart+7,dayC[i])||0),tk:cv(wsMain,dailyStart+8,dayC[i])||0,at:cv(wsMain,dailyStart+9,dayC[i])||0});
+  const daily=[]; for(let i=0;i<7;i++) daily.push({n:dn[i],t:Number(cv(wsMain,dailyStart+0,dayC[i]))||0,f:Number(cv(wsMain,dailyStart+1,dayC[i]))||0,a:(Number(cv(wsMain,dailyStart+2,dayC[i]))||0)*100,y:(Number(cv(wsMain,dailyStart+3,dayC[i]))||0)*100,c:(Number(cv(wsMain,dailyStart+6,dayC[i]))||0)*100,v:Math.round(Number(cv(wsMain,dailyStart+7,dayC[i]))||0),tk:Number(cv(wsMain,dailyStart+8,dayC[i]))||0,at:Number(cv(wsMain,dailyStart+9,dayC[i]))||0});
   const catC={'14':'鞋','16':'服','18':'器配','4':'男','6':'女','10':'童'}; const catData={};
   for(const[col,nm]of Object.entries(catC)){ 
     const cn=parseInt(col); 
     const isProduct=cn>=14; // cols 14/16/18 = product group
-    const f=cv(wsMain,cateStart+1,cn)||0; 
-    const ss=cv(wsMain,cateStart+12,cn)||0; 
-    catData[nm]={flow:f,qty:cv(wsMain,cateStart+2,cn)||0,disc:(cv(wsMain,cateStart+3,cn)||0)*100,yoy:(cv(wsMain,cateStart+7,cn)||0)*100,mom:(cv(wsMain,cateStart+5,cn)||0)*100,f_share:(cv(wsMain,cateStart+9,cn)||0)*100,group:isProduct?'product':'gender',sku_s:ss,s_qty:cv(wsMain,cateStart+17,cn)||0,s_sku:cv(wsMain,cateStart+18,cn)||0,sku_u:(cv(wsMain,cateStart+15,cn)||0)*100,sat:(cv(wsMain,cateStart+21,cn)||0)*100,st:(cv(wsMain,cateStart+22,cn)||0)*100};
+    const f=Number(cv(wsMain,cateStart+1,cn))||0; 
+    const ss=Number(cv(wsMain,cateStart+12,cn))||0; 
+    catData[nm]={flow:f,qty:Number(cv(wsMain,cateStart+2,cn))||0,disc:(Number(cv(wsMain,cateStart+3,cn))||0)*100,yoy:(Number(cv(wsMain,cateStart+7,cn))||0)*100,mom:(Number(cv(wsMain,cateStart+5,cn))||0)*100,f_share:(Number(cv(wsMain,cateStart+9,cn))||0)*100,group:isProduct?'product':'gender',sku_s:ss,s_qty:Number(cv(wsMain,cateStart+17,cn))||0,s_sku:Number(cv(wsMain,cateStart+18,cn))||0,sku_u:(Number(cv(wsMain,cateStart+15,cn))||0)*100,sat:(Number(cv(wsMain,cateStart+21,cn))||0)*100,st:(Number(cv(wsMain,cateStart+22,cn))||0)*100};
   }
   const tsq=Object.values(catData).filter(c=>c.group==='product').reduce((s,c)=>s+(c.s_qty||0),0);
   for(const[nm,cd]of Object.entries(catData)){ if(cd.group!=='product') continue; const sqs=tsq>0?(cd.s_qty/tsq*100):0,fs=cd.f_share; cd.s_q_share=sqs; cd.gap=fs-sqs; cd.match_lbl=Math.abs(fs-sqs)<=5?'匹配':(fs>sqs?'销>库+'+((fs-sqs).toFixed(1))+'pp':'库>销'+((sqs-fs).toFixed(1))+'pp'); }
   const topData={}; const tl={'0':'TOP10','1':'TOP20','2':'TOP40','3':'TOP60','4':'TOP100'};
-  for(let i=0;i<5;i++){ const r=topStart+i,d4=cv(wsMain,r,4),d6=cv(wsMain,r,6); if(d4!==null||d6!==null) topData[tl[String(i)]]={'4':(d4||0)*100,'6':(d6||0)*100,'8':(cv(wsMain,r,8)||0)*100,'10':(cv(wsMain,r,10)||0)*100,'13':(cv(wsMain,r,13)||0)*100}; }
+  for(let i=0;i<5;i++){ const r=topStart+i,d4=cv(wsMain,r,4),d6=cv(wsMain,r,6); if(d4!==null||d6!==null) topData[tl[String(i)]]={'4':(Number(d4)||0)*100,'6':(Number(d6)||0)*100,'8':(Number(cv(wsMain,r,8))||0)*100,'10':(Number(cv(wsMain,r,10))||0)*100,'13':(Number(cv(wsMain,r,13))||0)*100}; }
   const subPs=[]; let inSubPs=false, inAcc=false;
   for(let r=subPsStart;r<=subPsStart+40&&r<=180;r++){
     const label=cv(wsMain,r,1); const flow=cv(wsMain,r,8);
@@ -769,15 +769,15 @@ function parseExcelWorkbook(wb){
     if(label&&flow&&Number(flow)&&!String(label).includes('器配')&&!String(label).includes('奥莱')&&!String(label).includes('销售')){
       if(!inSubPs) inSubPs=true;
       const disc=cv(wsMain,r,10);
-      if(inAcc) subPs.push({isAcc:true,n:String(label),f:Number(flow),d:disc?Number(disc)*100:0,q:cv(wsMain,r,4)?Math.round(Number(cv(wsMain,r,4))):0});
-      else subPs.push({isAcc:false,n:String(label),f:Number(flow),d:disc?Number(disc)*100:0,q:cv(wsMain,r,4)?Math.round(Number(cv(wsMain,r,4))):0});
+      if(inAcc) subPs.push({isAcc:true,n:String(label),f:Number(flow),d:Number(disc)?Number(disc)*100:0,q:cv(wsMain,r,4)?Math.round(Number(cv(wsMain,r,4))):0});
+      else subPs.push({isAcc:false,n:String(label),f:Number(flow),d:Number(disc)?Number(disc)*100:0,q:cv(wsMain,r,4)?Math.round(Number(cv(wsMain,r,4))):0});
     }
   }
   const shoeSeries=[];
   for(let r=shoeStart+1;r<=shoeStart+20&&r<=120;r++){
     const label=cv(wsMain,r,1); if(label==='合计') break;
     const flow=cv(wsMain,r,8);
-    if(label&&flow&&Number(flow)) shoeSeries.push({n:String(label),f:Number(flow),q:cv(wsMain,r,4)?Math.round(Number(cv(wsMain,r,4))):0,d:(cv(wsMain,r,10)||0)*100});
+    if(label&&flow&&Number(flow)) shoeSeries.push({n:String(label),f:Number(flow),q:cv(wsMain,r,4)?Math.round(Number(cv(wsMain,r,4))):0,d:(Number(cv(wsMain,r,10))||0)*100});
   }
   const seasData={};
   if(wsSeas){
@@ -787,12 +787,12 @@ function parseExcelWorkbook(wb){
     const seasSkuURow=findRow(wsSeas,'SKU动销',1)||16;
     const seasSatRow=findRow(wsSeas,'无可补',1)||25;
     const seasKeys=[['4','2025Q4及以前(服)'],['6','2026Q1(服)'],['8','2026Q2(服)'],['10','2026Q3+(服)'],['13','26年常青(服)'],['15','2025Q4及以前(鞋)'],['18','2026Q1(鞋)'],['20','2026Q2(鞋)'],['22','2026Q3+(鞋)'],['25','26年常青(鞋)']];
-    for(const[ck,lb]of seasKeys){ const cn=parseInt(ck); const f=cv(wsSeas,seasFlowRow,cn); if(f!==null) seasData[lb]={f:Number(f),d:(cv(wsSeas,seasDiscRow,cn)||0)*100,q:Math.round(cv(wsSeas,seasQtyRow,cn)||0),su:(cv(wsSeas,seasSkuURow,cn)||0)*100,sat:(cv(wsSeas,seasSatRow,cn)||0)*100}; }
+    for(const[ck,lb]of seasKeys){ const cn=parseInt(ck); const f=cv(wsSeas,seasFlowRow,cn); if(f!==null) seasData[lb]={f:Number(f),d:(Number(cv(wsSeas,seasDiscRow,cn))||0)*100,q:Math.round(Number(cv(wsSeas,seasQtyRow,cn))||0),su:(Number(cv(wsSeas,seasSkuURow,cn))||0)*100,sat:(Number(cv(wsSeas,seasSatRow,cn))||0)*100}; }
   }
   const discRange={};
   for(let r=discStart;r<=discStart+3&&r<=220;r++){ const label=cv(wsMain,r,1); if(!label) continue; discRange[String(r)]={label:String(label),cols:{}}; for(let c=1;c<=15;c++){ const v=cv(wsMain,r,c); if(v!==null&&v!==undefined) discRange[String(r)].cols[String(c)]=v; } }
   const memberData=[];
-  if(wsMember){ const memStart=findRow(wsMember,'销售')-1||7; for(let r=memStart;r<=memStart+15&&r<=30;r++){ const id=cv(wsMember,r,1); const name=cv(wsMember,r,3); const sales=cv(wsMember,r,9); if(name&&sales&&Number(sales)>0) memberData.push({id:String(id||''),name:String(name),sales:Number(sales),qty:Math.round(cv(wsMember,r,10)||0),unitPrice:Number(cv(wsMember,r,11)||0),avgTicket:Number(cv(wsMember,r,12)||0),attach:Number(cv(wsMember,r,13)||0),shoePct:(cv(wsMember,r,15)||0)*100,clothPct:(cv(wsMember,r,16)||0)*100,o2o:cv(wsMember,r,17)||0}); } }
+  if(wsMember){ const memStart=findRow(wsMember,'销售')-1||7; for(let r=memStart;r<=memStart+15&&r<=30;r++){ const id=cv(wsMember,r,1); const name=cv(wsMember,r,3); const sales=cv(wsMember,r,9); if(name&&sales&&Number(sales)>0) memberData.push({id:String(id||''),name:String(name),sales:Number(sales),qty:Math.round(Number(cv(wsMember,r,10))||0),unitPrice:Number(cv(wsMember,r,11)||0),avgTicket:Number(cv(wsMember,r,12)||0),attach:Number(cv(wsMember,r,13)||0),shoePct:(Number(cv(wsMember,r,15))||0)*100,clothPct:(Number(cv(wsMember,r,16))||0)*100,o2o:Number(cv(wsMember,r,17))||0}); } }
   const t=Number(r7[14])||0,act=Number(r7[17])||0,ach=(Number(r7[20])||0)*100,co=(Number(r7[5])||0)*100,fl=Number(r7[8])||0,ss=(Number(r7[24])||0)*100,yo=(Number(r7[22])||0)*100,mo=(Number(r7[28])||0)*100;
   const oo=Number(r7[33])||0,op=(Number(r7[35])||0)*100,pd=Number(r7[37])||0,ol=Number(r7[39])||0;
   const at=Number(r15[10])||0,up=Number(r15[4])||0,ar=Number(r15[16])||0,di=(Number(r15[28])||0)*100,tc=Number(r15[22])||0;
