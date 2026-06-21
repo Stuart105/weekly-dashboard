@@ -161,6 +161,7 @@ if "actual" in updates and "tkt_cnt" in updates and updates["tkt_cnt"] > 0:
     updates["avg_t"] = round(updates["actual"] / updates["tkt_cnt"], 2)
 
 # ── 更新 HTML ──
+# 使用 JSON 解析方式，只更新 DATA 对象的顶级字段，避免正则误伤嵌套数据
 print("\n📝 更新 HTML...")
 updated_count = 0
 for html_name in ('weekly-dashboard.html', 'index.html'):
@@ -170,19 +171,31 @@ for html_name in ('weekly-dashboard.html', 'index.html'):
 
     html = html_path.read_text(encoding='utf-8')
 
+    # 找到 DATA 对象并解析为 JSON
+    m = re.search(r'const DATA = ({.*?});', html, re.DOTALL)
+    if not m:
+        print(f"  ⚠️ {html_name}: 未找到 DATA 对象")
+        continue
+
+    try:
+        data_obj = json.loads(m.group(1))
+    except json.JSONDecodeError as e:
+        print(f"  ❌ {html_name}: JSON 解析失败: {e}")
+        continue
+
+    # 只更新顶级字段（不触碰嵌套对象）
     for key, val in updates.items():
         if key == "store":
-            continue  # store 禁止覆盖，保持原值
-        if isinstance(val, str):
-            pattern = rf'"{re.escape(key)}":\s*"[^"]*"'
-            replacement = f'"{key}": "{val}"'
-        else:
-            pattern = rf'"{re.escape(key)}":\s*-?[\d.]+(?:e[+-]?\d+)?'
-            replacement = f'"{key}": {val}'
-        new_html = re.sub(pattern, replacement, html)
-        if new_html != html:
-            updated_count += 1
-            html = new_html
+            continue  # store 禁止覆盖
+        if key in data_obj:
+            old_val = data_obj[key]
+            if old_val != val:
+                data_obj[key] = val
+                updated_count += 1
+
+    # 序列化回 HTML
+    new_data_str = json.dumps(data_obj, ensure_ascii=False, default=str)
+    html = html[:m.start(1)] + new_data_str + html[m.end(1):]
 
     html_path.write_text(html, encoding='utf-8')
     print(f"  ✅ {html_name}")
