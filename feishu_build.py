@@ -97,9 +97,15 @@ SECTION1_MAP = {
     "字段 5": "conv_mom", "字段 18": "sssg_adj",
 }
 SECTION2_MAP = {
-    "字段 10": "attach_r", "字段 15": "tkt_cnt", "字段 20": "disc",
-    "字段 26": "disc_adj", "RGHW": "shoe_share", "字段 6": "unit_p",
-    "字段 4": "unit_yoy", "字段 13": "attach_yoy", "字段 16": "avg_t_yoy",
+    # Row 12 标签: 字段3=当期, 字段4=同比, 字段10=当期, 字段13=环比, 字段15=当期, 字段16=同比
+    "字段 3":             "unit_p",      # 件单价 当期 = 132
+    "字段 4":             "unit_yoy",    # 件单价 同比 = 0.3%
+    "字段 10":            "attach_r",    # 连带率 当期 = 3.91
+    "字段 13":            "attach_yoy",  # 连带率 环比 = -30.9%
+    "字段 15":            "tkt_cnt",     # 交易次数 当期 = 216
+    "字段 16":            "tkt_c_yoy",   # 交易次数 同比 = -18.8%
+    "字段 20":            "disc",        # 折扣率 = 44.1%
+    "字段 26":            "disc_adj",    # 折扣率(剔团购) = 44.1%
 }
 
 kpi_updates = {"period": week_period, "week_range": week_range}
@@ -111,19 +117,31 @@ def apply_map(row, mapping, label):
 
 apply_map(sec1_row, SECTION1_MAP, "总体KPI")
 apply_map(sec2_row, SECTION2_MAP, "KPI细分")
-if "actual" in kpi_updates and "tkt_cnt" in kpi_updates and kpi_updates["tkt_cnt"] > 0:
-    kpi_updates["avg_t"] = round(kpi_updates["actual"] / kpi_updates["tkt_cnt"], 2)
+
+# avg_t: 从日别区客单价行取 周报（单位：元）字段
+for row in rows:
+    if get(row, "奥莱店华南区城市") == "客单价":
+        v = _num(row.get("周报（单位：元）"))
+        if v: kpi_updates["avg_t"] = v
+        break
 
 # ── 3. 日别数据 ──
+# ⚠️ 限定在日别区段内(品类区也有同比/环比行导致覆盖)
 # 日别列映射: 字段ID → 星期
 DAY_COLS = {"字段 3": "周一", "字段 4": "周二", "RGHW": "周三",
             "字段 6": "周四", "线下折扣店": "周五", "字段 9": "周六", "字段 10": "周日"}
+DAILY_METRICS = ("流水目标", "EPOS流水", "EPOS达成率", "同比", "环比",
+                 "成交率", "客流数量", "客单价", "连带率", "同店同比\n(剔除团购)")
 
 daily_raw = {}
+in_daily_section = False
 for row in rows:
     city = get(row, "奥莱店华南区城市") or ""
-    if city in ("流水目标", "EPOS流水", "EPOS达成率", "同比", "环比",
-                 "成交率", "客流数量", "客单价", "连带率", "同店同比\n(剔除团购)"):
+    if city == "日别":
+        in_daily_section = True; continue
+    if city == "大类别":
+        break  # 日别区结束
+    if in_daily_section and city in DAILY_METRICS:
         metric = city.replace("\n", "")
         daily_raw[metric] = row
 
@@ -159,9 +177,14 @@ CATE_METRICS = {
 for cname in CATE_COLS.values():
     category[cname] = {dk: dv for _, (dk, dv) in CATE_METRICS.items()}
 
+in_category = False
 for row in rows:
     city = get(row, "奥莱店华南区城市") or ""
-    if city in CATE_METRICS:
+    if city == "大类别":
+        in_category = True
+    if city == "服装-PS中类":
+        break  # 品类区结束
+    if in_category and city in CATE_METRICS:
         dkey, _ = CATE_METRICS[city]
         for fid, cname in CATE_COLS.items():
             v = getn(row, fid)
@@ -171,6 +194,10 @@ for row in rows:
 # 品类补充字段: match_lbl (基于yoy方向)
 for cname, cd in category.items():
     cd["match_lbl"] = "增长" if cd.get("yoy", 0) > 0 else ("下降" if cd.get("yoy", 0) < 0 else "持平")
+
+# shoe_share: 从品类数据取鞋的流水占比
+if "鞋" in category and category["鞋"].get("f_share"):
+    kpi_updates["shoe_share"] = category["鞋"]["f_share"]
 
 # ── 5. 服装品类(子品类 sub_ps) ──
 sub_ps = []
