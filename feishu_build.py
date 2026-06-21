@@ -199,27 +199,36 @@ for cname, cd in category.items():
 if "鞋" in category and category["鞋"].get("f_share"):
     kpi_updates["shoe_share"] = category["鞋"]["f_share"]
 
-# ── 5. 服装品类(子品类 sub_ps) ──
+# ── 5. 子品类 (sub_ps = 服装PS中类 + 器配中类) ──
 sub_ps = []
-in_apparel = False
-for row in rows:
-    city = get(row, "奥莱店华南区城市") or ""
-    if city == "服装-PS中类":
-        in_apparel = True; continue
-    if city == "合计" and in_apparel:
-        in_apparel = False; continue
-    if not in_apparel: continue
-    if not city or city in ("服装-PS中类", "裙类", "编织衫", "其他中类"): continue
+sub_sections = [("服装-PS中类", "器配中类"), ("器配中类", "TOP商品")]  # (start, end)
 
-    name = city
-    flow_val = getn(row, "RGHW") or 0
-    disc_val = getn(row, "字段 9") or 0  # 占比 → 改为用占比字段
-    qty_val = getn(row, "字段 13") or 0   # 同比
-    yoy_val = getn(row, "字段 15") or 0   # 环比
+for sec_start, sec_end in sub_sections:
+    in_section = False
+    for row in rows:
+        city = get(row, "奥莱店华南区城市") or ""
+        if city == sec_start:
+            in_section = True; continue
+        if city == sec_end or (city == "合计" and in_section):
+            break
+        if not in_section: continue
+        # 跳过标签行和无数据行
+        if city in (sec_start, "") and get(row, "RGHW") is None:
+            continue
+        if not city: continue
 
-    if name and flow_val:
-        sub_ps.append({"n": name, "f": flow_val, "d": disc_val, "q": int(qty_val) if qty_val else 0,
-                        "isAcc": False, "yoy": yoy_val})
+        name = city
+        flow_val = getn(row, "RGHW") or 0
+        share_val = getn(row, "字段 9") or 0    # 占比
+        yoy_val = getn(row, "字段 13") or 0     # 同比(剔除团购)
+        mom_val = getn(row, "字段 15") or 0     # 环比
+
+        # 所有中类都包含(含无数据项)
+        sub_ps.append({
+            "n": name, "f": flow_val, "d": share_val,
+            "q": 0, "isAcc": False,  # q=数量(飞书无此数据)
+            "yoy": yoy_val, "mom": mom_val
+        })
 
 # ── 6. 鞋系列 ──
 shoes = []
@@ -252,28 +261,9 @@ for row in rows:
             if v is not None:
                 top.setdefault(key, {})[sub_key] = v
 
-# ── 8. 折扣区间 ──
-disc_range = {}
-for row in rows:
-    city = get(row, "奥莱店华南区城市") or ""
-    if city == "单件订单" or city == "数量":
-        continue
-    if get(row, "销售订单数据"):
-        continue
-    # 折扣区间行: city 是一个数字 (折扣率)
-    try:
-        disc_key = int(float(city))
-    except (ValueError, TypeError):
-        continue
-    cols = {}
-    for fid in ("字段 3", "字段 4", "字段 6", "RGHW", "字段 9", "字段 10", "字段 13", "字段 15"):
-        v = get(row, fid)
-        if v is not None:
-            cols[fid] = str(v)
-    label = get(row, "RGHW") or ""
-    if not label and not cols:
-        continue
-    disc_range[str(disc_key)] = {"label": str(label), "cols": cols}
+# ── 8. 折扣区间 (暂用旧数据, 飞书表格格式不同) ──
+# 飞书表格中折扣区间数据与TOP商品混排, 暂不覆盖
+disc_range = None  # 保留 DATA 中已有的 disc_range
 
 # ── 构建最终 DATA 更新 ──
 all_updates = dict(kpi_updates)
@@ -282,8 +272,7 @@ all_updates["category"] = category
 all_updates["sub_ps"] = sub_ps
 all_updates["shoe"] = shoes
 all_updates["top"] = top
-if disc_range:
-    all_updates["disc_range"] = disc_range
+# disc_range 暂不更新
 
 # ── 更新 HTML ──
 print("📝 更新 HTML...")
@@ -328,4 +317,4 @@ for html_name in ('weekly-dashboard.html', 'index.html'):
 print(f"\n📊 更新完成！共更新 {updated_count} 个字段")
 print(f"   周期: {week_period} | {week_range}")
 print(f"   daily: {len(daily)} 天 | category: {len(category)} 类 | sub_ps: {len(sub_ps)} 个")
-print(f"   shoes: {len(shoes)} 个 | TOP: {len(top)} 组 | disc_range: {len(disc_range)} 档")
+print(f"   shoes: {len(shoes)} 个 | TOP: {len(top)} 组")
