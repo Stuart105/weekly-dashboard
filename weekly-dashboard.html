@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="favicon.ico" type="image/x-icon">
-<title>W24 周报分析仪表板 | 奥莱店华南区城市 | v0621-1002</title>
+<title>W24 周报分析仪表板 | 奥莱店华南区城市 | v0621-1004</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -113,7 +113,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 <div class="toast" id="toast"></div>
 
 <div class="header">
-  <div><h1>📊 W24 周报分析仪表板 <span style="background:#ef4444;color:white;font-size:11px;padding:2px 8px;border-radius:4px;vertical-align:middle">v0621.1002</span></h1><div class="meta">奥莱店华南区城市 | 2026.06.08-06.14</div></div>
+  <div><h1>📊 W24 周报分析仪表板 <span style="background:#ef4444;color:white;font-size:11px;padding:2px 8px;border-radius:4px;vertical-align:middle">v0621.1004</span></h1><div class="meta">奥莱店华南区城市 | 2026.06.08-06.14</div></div>
   <div class="actions">
     <button class="btn btn-primary" id="btnImport" onclick="triggerImport()">📥 导入周报</button>
     <button class="btn btn-outline" onclick="refreshAllCharts()">🔄 刷新图表</button>
@@ -253,7 +253,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
   </div>
 </div>
 
-<div class="footer">奥莱店华南区城市 | W24 周报分析仪表板 | EdgeOne Pages 部署 | 构建: 06-21 10:02 | AI店长出品</div>
+<div class="footer">奥莱店华南区城市 | W24 周报分析仪表板 | EdgeOne Pages 部署 | 构建: 06-21 10:04 | AI店长出品</div>
 
 </div>
 
@@ -793,10 +793,10 @@ function parseExcelWorkbook(wb){
   for(let r=discStart;r<=discStart+3&&r<=220;r++){ const label=cv(wsMain,r,1); if(!label) continue; discRange[String(r)]={label:String(label),cols:{}}; for(let c=1;c<=15;c++){ const v=cv(wsMain,r,c); if(v!==null&&v!==undefined) discRange[String(r)].cols[String(c)]=v; } }
   const memberData=[];
   if(wsMember){ const memStart=findRow(wsMember,'销售')-1||7; for(let r=memStart;r<=memStart+15&&r<=30;r++){ const id=cv(wsMember,r,1); const name=cv(wsMember,r,3); const sales=cv(wsMember,r,9); if(name&&sales&&Number(sales)>0) memberData.push({id:String(id||''),name:String(name),sales:Number(sales),qty:Math.round(cv(wsMember,r,10)||0),unitPrice:Number(cv(wsMember,r,11)||0),avgTicket:Number(cv(wsMember,r,12)||0),attach:Number(cv(wsMember,r,13)||0),shoePct:(cv(wsMember,r,15)||0)*100,clothPct:(cv(wsMember,r,16)||0)*100,o2o:cv(wsMember,r,17)||0}); } }
-  const t=r7[14]||0,act=r7[17]||0,ach=(r7[20]||0)*100,co=(r7[5]||0)*100,fl=r7[8]||0,ss=(r7[24]||0)*100,yo=(r7[22]||0)*100,mo=(r7[28]||0)*100;
-  const oo=r7[33]||0,op=(r7[35]||0)*100,pd=r7[37]||0,ol=r7[39]||0;
-  const at=r15[10]||0,up=r15[4]||0,ar=r15[16]||0,di=(r15[28]||0)*100,tc=r15[22]||0;
-  const cy=(r7[6]||0)*100,fy=(r7[10]||0)*100,ay=(r15[12]||0)*100,ayy=(r15[18]||0)*100,uy=(r15[6]||0)*100,dy=(r15[30]||0)*100,om=(r7[36]||0)*100,cm=(r7[7]||0)*100,fm=(r7[12]||0)*100;
+  const t=Number(r7[14])||0,act=Number(r7[17])||0,ach=(Number(r7[20])||0)*100,co=(Number(r7[5])||0)*100,fl=Number(r7[8])||0,ss=(Number(r7[24])||0)*100,yo=(Number(r7[22])||0)*100,mo=(Number(r7[28])||0)*100;
+  const oo=Number(r7[33])||0,op=(Number(r7[35])||0)*100,pd=Number(r7[37])||0,ol=Number(r7[39])||0;
+  const at=Number(r15[10])||0,up=Number(r15[4])||0,ar=Number(r15[16])||0,di=(Number(r15[28])||0)*100,tc=Number(r15[22])||0;
+  const cy=(Number(r7[6])||0)*100,fy=(Number(r7[10])||0)*100,ay=(Number(r15[12])||0)*100,ayy=(Number(r15[18])||0)*100,uy=(Number(r15[6])||0)*100,dy=(Number(r15[30])||0)*100,om=(Number(r7[36])||0)*100,cm=(Number(r7[7])||0)*100,fm=(Number(r7[12])||0)*100;
   const mfmt=v=>v>=10000?((v/10000).toFixed(1)+'万'):('¥'+v.toFixed(0));
   const mat=[['流水达成率',ach.toFixed(2)+'%',(yo>0?'+':'')+yo.toFixed(2)+'%',(mo>0?'+':'')+mo.toFixed(2)+'%'],['成交率',co.toFixed(2)+'%',(cy>0?'+':'')+cy.toFixed(2)+'%pp',(cm>0?'+':'')+cm.toFixed(2)+'%pp'],['日均客流',fl.toFixed(0)+'人',(fy>0?'+':'')+fy.toFixed(2)+'%',(fm>0?'+':'')+fm.toFixed(2)+'%'],['客单价',(at>=10000?((at/10000).toFixed(1)+'万'):('¥'+at.toFixed(0))),(ay>0?'+':'')+ay.toFixed(2)+'%',(ay>0?'+':'')+ay.toFixed(2)+'%'],['连带率',ar.toFixed(2)+'件',(ayy>0?'+':'')+ayy.toFixed(2)+'%',(ayy>0?'+':'')+ayy.toFixed(2)+'%'],['件单价',(up>=10000?((up/10000).toFixed(1)+'万'):('¥'+up.toFixed(0))),(uy>0?'+':'')+uy.toFixed(2)+'%',(uy>0?'+':'')+uy.toFixed(2)+'%'],['折扣率',di.toFixed(2)+'%',(dy>0?'+':'')+dy.toFixed(2)+'%pp',(dy>0?'+':'')+dy.toFixed(2)+'%pp'],['O2O流水',(oo>=10000?((oo/10000).toFixed(1)+'万'):('¥'+oo.toFixed(0))),'--',(om>0?'+':'')+om.toFixed(2)+'%'],['SSSG',(ss>0?'+':'')+ss.toFixed(2)+'%',(ss>0?'+':'')+ss.toFixed(2)+'%',(mo>0?'+':'')+mo.toFixed(2)+'%']];
   const sh=catData['鞋']?catData['鞋'].f_share:0,su=catData['鞋']?catData['鞋'].sku_u:0;
