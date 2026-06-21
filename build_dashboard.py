@@ -1030,7 +1030,7 @@ function initTables() {{
       ct+='<tr><td>'+cn+'</td><td>¥'+cd.flow.toLocaleString()+'</td><td>'+(cd.qty?cd.qty.toLocaleString():'—')+'</td><td>'+cd.f_share.toFixed(2)+'%</td>'
         +'<td class="'+ycls+'">'+(cd.yoy>0?'+':'')+cd.yoy.toFixed(2)+'%</td><td class="'+mcls+'">'+(cd.mom>0?'+':'')+cd.mom.toFixed(2)+'%</td>'
         +'<td>'+(cd.disc?cd.disc.toFixed(2)+'%':'—')+'</td><td>'+(cd.sku_s?cd.sku_s:'—')+'</td><td>'+(cd.sku_u&&cd.sku_u>0?cd.sku_u.toFixed(2)+'%':'—')+'</td>'
-        +'<td>'+(cd.s_qty?cd.s_qty.toLocaleString():'—')+'</td><td colspan="2" style="color:#94a3b8;font-size:11px">（匹配分析仅产品维度）</td></tr>';
+        +'<td>'+(cd.s_qty?cd.s_qty.toLocaleString():'—')+'</td><td>'+(cd.s_q_share?cd.s_q_share.toFixed(2)+'%':'—')+'</td><td style="color:#94a3b8;font-size:11px">（匹配分析仅产品维度）</td></tr>';
     }}
   }}
   document.getElementById('cateTable').innerHTML=ct;

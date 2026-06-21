@@ -172,10 +172,13 @@ CATE_METRICS = {
     "SKU(个数)": ("sku_s", 0), "SKU动销率": ("sku_u", 0),
     "库存数量": ("s_qty", 0), "库存占比": ("s_q_share", 0),
 }
+PRODUCT_CATS = {"鞋", "服", "器配"}
 
-# 为每个品类初始化默认值
+# 为每个品类初始化默认值，区分产品组和性别组
 for cname in CATE_COLS.values():
-    category[cname] = {dk: dv for _, (dk, dv) in CATE_METRICS.items()}
+    entry = {dk: dv for _, (dk, dv) in CATE_METRICS.items()}
+    entry["group"] = "product" if cname in PRODUCT_CATS else "gender"
+    category[cname] = entry
 
 in_category = False
 for row in rows:
@@ -191,9 +194,29 @@ for row in rows:
             if v is not None:
                 category[cname][dkey] = v
 
-# 品类补充字段: match_lbl (基于yoy方向)
+# 品类补充字段: 计算 match_lbl 和 gap（仅产品组）
+# 库存占比优先用飞书原始数据，若缺失则用库存数量计算
+prod_cats = [c for c, cd in category.items() if cd.get("group") == "product"]
+total_sq = sum(category[c].get("s_qty", 0) for c in prod_cats)
+for cname in prod_cats:
+    cd = category[cname]
+    sqs = cd.get("s_q_share", 0)
+    if not sqs and total_sq > 0 and cd.get("s_qty", 0) > 0:
+        sqs = cd["s_qty"] / total_sq * 100
+        cd["s_q_share"] = sqs
+    fs = cd.get("f_share", 0)
+    cd["gap"] = fs - sqs
+    if abs(fs - sqs) <= 5:
+        cd["match_lbl"] = "匹配"
+    elif fs > sqs:
+        cd["match_lbl"] = f"销>库+{fs - sqs:.1f}pp"
+    else:
+        cd["match_lbl"] = f"库>销{sqs - fs:.1f}pp"
+
+# 性别组: match_lbl 标记为仅产品维度
 for cname, cd in category.items():
-    cd["match_lbl"] = "增长" if cd.get("yoy", 0) > 0 else ("下降" if cd.get("yoy", 0) < 0 else "持平")
+    if cd.get("group") == "gender":
+        cd["match_lbl"] = "（匹配分析仅产品维度）"
 
 # shoe_share: 从品类数据取鞋的流水占比
 if "鞋" in category and category["鞋"].get("f_share"):
