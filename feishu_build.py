@@ -265,6 +265,49 @@ for row in rows:
 # 飞书表格中折扣区间数据与TOP商品混排, 暂不覆盖
 disc_range = None  # 保留 DATA 中已有的 disc_range
 
+# ── 9. 季节数据 (从 tblhxVtkScorpwxQ 产品季节表) ──
+SEAS_TABLE = "tblhxVtkScorpwxQ"
+# 列 → 季节名映射 (基于行2标签)
+SEAS_COLS = {
+    "服": "2025Q4及以前(服)", "字段 4": "2026Q1(服)", "字段 6": "2026Q2(服)",
+    "字段 8": "2026Q3+(服)", "字段 11": "26年常青(服)",
+    "鞋": "2025Q4及以前(鞋)", "字段 15": "2026Q1(鞋)", "字段 17": "2026Q2(鞋)",
+    "字段 19": "2026Q3+(鞋)", "字段 22": "26年常青(鞋)",
+}
+# 指标行 → seas字段
+SEAS_METRICS = {
+    "流水": ("f", 0), "数量": ("q", 0), "折扣": ("d", 0),
+    "流水占比": ("fs", 0), "环比": ("mom", 0), "SKU(个数)": ("sku", 0),
+    "库存数量": ("stock_qty", 0), "库存金额": ("stock_amt", 0),
+    "吊牌价": ("tag_price", 0), "同比": ("yoy", 0),
+}
+
+seas = {}
+r2 = requests.get(f"https://open.feishu.cn/open-apis/bitable/v1/apps/{BASE_ID}/tables/{SEAS_TABLE}/records",
+    headers={"Authorization": TOKEN}, params={"page_size": 100}, timeout=15)
+seas_items = r2.json().get("data", {}).get("items", [])
+seas_rows = [item.get("fields", {}) for item in seas_items]
+
+for row in seas_rows:
+    metric_name = (row.get("大类别") or "").replace("\n", "")
+    if metric_name in SEAS_METRICS:
+        dkey, default = SEAS_METRICS[metric_name]
+        for fid, season_key in SEAS_COLS.items():
+            v = _num(row.get(fid))
+            if v is not None:
+                seas.setdefault(season_key, {})[dkey] = v
+    if metric_name == "大类别":
+        break  # 第一区段结束(后面是男女拆分段)
+
+# su(售罄率)计算: flow / tag_price * 100 if tag_price > 0
+for key, sd in seas.items():
+    if sd.get("tag_price", 0) > 0:
+        sd["su"] = round(sd.get("f", 0) / sd["tag_price"] * 100, 2)
+    else:
+        sd["su"] = 0
+    sd.setdefault("sat", 0)
+    sd.setdefault("stock_qty", sd.get("stock_qty", 0))
+
 # ── 构建最终 DATA 更新 ──
 all_updates = dict(kpi_updates)
 all_updates["daily"] = daily
@@ -272,6 +315,7 @@ all_updates["category"] = category
 all_updates["sub_ps"] = sub_ps
 all_updates["shoe"] = shoes
 all_updates["top"] = top
+all_updates["seas"] = seas
 # disc_range 暂不更新
 
 # ── 更新 HTML ──
@@ -317,4 +361,4 @@ for html_name in ('weekly-dashboard.html', 'index.html'):
 print(f"\n📊 更新完成！共更新 {updated_count} 个字段")
 print(f"   周期: {week_period} | {week_range}")
 print(f"   daily: {len(daily)} 天 | category: {len(category)} 类 | sub_ps: {len(sub_ps)} 个")
-print(f"   shoes: {len(shoes)} 个 | TOP: {len(top)} 组")
+print(f"   shoes: {len(shoes)} 个 | TOP: {len(top)} 组 | seas: {len(seas)} 季")
