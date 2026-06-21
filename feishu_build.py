@@ -363,6 +363,17 @@ for key, sd in seas.items():
     else: sd["su"] = 0
     sd.setdefault("sat", 0); sd.setdefault("stock_qty", sd.get("stock_qty", 0))
 
+# sku_u 补充: 从季节表 SKU动销率行取总服/总鞋/男/女
+# 行18(总段) → 服/鞋; 行45(男服/女服) → 男/女
+for fid, cname in [("服", "服"), ("鞋", "鞋")]:
+    v = _num(seas_rows[17].get(fid)) if len(seas_rows) > 17 else None
+    if v and cname in category:
+        if category[cname].get("sku_u", 0) == 0: category[cname]["sku_u"] = v
+for fid, cname in [("服", "男"), ("鞋", "女")]:
+    v = _num(seas_rows[44].get(fid)) if len(seas_rows) > 44 else None
+    if v and cname in category:
+        if category[cname].get("sku_u", 0) == 0: category[cname]["sku_u"] = v
+
 # ── 构建最终 DATA 更新 ──
 all_updates = dict(kpi_updates)
 all_updates["daily"] = daily
