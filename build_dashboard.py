@@ -1493,6 +1493,7 @@ function buildKpiStrip(){{
 
 // ─── INIT ───
 window.addEventListener('DOMContentLoaded',()=>{{
+  buildKpiStrip();
   initTables();
   drawDailyCharts();
 }});
