@@ -315,6 +315,12 @@ for html_name in ('weekly-dashboard.html', 'index.html'):
 
     new_data = json.dumps(data_obj, ensure_ascii=False, default=str)
     html = html[:m.start(1)] + new_data + html[m.end(1):]
+
+    # 确保 init 中包含 buildKpiStrip()
+    old_i = "window.addEventListener('DOMContentLoaded',()=>{\n  initTables();\n  drawDailyCharts();\n});"
+    new_i = "window.addEventListener('DOMContentLoaded',()=>{\n  buildKpiStrip();\n  initTables();\n  drawDailyCharts();\n});"
+    html = html.replace(old_i, new_i)
+
     html_path.write_text(html, encoding='utf-8')
     print(f"  ✅ {html_name}")
 
