@@ -67,7 +67,8 @@ class DashboardHandler(http.server.SimpleHTTPRequestHandler):
     def _handle_feishu(self):
         """Fetch data from Feishu Bitable and return as DATA JSON"""
         try:
-            from feishu_fetch import fetch
+            sys.path.insert(0, str(BASE))
+            from feishu.feishu_fetch import fetch
             data = fetch()
             self.send_response(200)
             self._json_headers()
@@ -161,7 +162,7 @@ class DashboardHandler(http.server.SimpleHTTPRequestHandler):
 
             # Step 3: Inject AI
             subprocess.run(
-                [sys.executable, 'deepseek_inject.py'],
+                [sys.executable, 'ai/deepseek_inject.py'],
                 cwd=str(BASE), capture_output=True, text=True, timeout=30
             )
 

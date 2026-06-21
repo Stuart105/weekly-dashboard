@@ -1,13 +1,13 @@
 """
 全量构建脚本 — 构建dashboard + DeepSeek AI实时分析注入
 
-用法: python3 build_all.py
+用法: python3 scripts/build_all.py
 """
 import subprocess
 import sys
 from pathlib import Path
 
-BASE = Path(__file__).parent
+BASE = Path(__file__).parent.parent
 
 print("=" * 50)
 print("Step 1: 构建 dashboard...")
@@ -21,7 +21,7 @@ print(ret.stdout.strip())
 print("=" * 50)
 print("Step 2: 注入 DeepSeek AI 实时分析...")
 print("=" * 50)
-ret = subprocess.run([sys.executable, 'deepseek_inject.py'], cwd=BASE, capture_output=True, text=True)
+ret = subprocess.run([sys.executable, 'ai/deepseek_inject.py'], cwd=BASE, capture_output=True, text=True)
 print(ret.stdout.strip())
 if ret.returncode != 0:
     print(f"⚠️  注入异常: {ret.stderr}")

@@ -7,7 +7,7 @@ import json, os, re, sys
 from pathlib import Path
 import requests
 
-BASE = Path(__file__).parent
+BASE = Path(__file__).parent.parent
 
 # ── 环境变量 ──
 APP_ID = os.environ.get("FEISHU_APP_ID", "cli_a931cdfb8bf89bb5")
