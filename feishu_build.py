@@ -146,28 +146,31 @@ CATE_COLS = {"字段 9": "鞋", "字段 13": "服", "字段 15": "器配",
              "字段 3": "男", "字段 4": "女", "字段 6": "童"}
 category = {}
 
+# 品类指标映射: feishu行类型 → (DATA字段名, 默认值)
+CATE_METRICS = {
+    "流水": ("flow", 0), "数量": ("qty", 0),
+    "折扣": ("disc", 0), "流水占比": ("f_share", 0),
+    "同比": ("yoy", 0), "环比": ("mom", 0),
+    "SKU(个数)": ("sku_s", 0), "SKU动销率": ("sku_u", 0),
+    "库存数量": ("s_qty", 0), "库存占比": ("s_q_share", 0),
+}
+
+# 为每个品类初始化默认值
+for cname in CATE_COLS.values():
+    category[cname] = {dk: dv for _, (dk, dv) in CATE_METRICS.items()}
+
 for row in rows:
     city = get(row, "奥莱店华南区城市") or ""
-    if city == "流水":
+    if city in CATE_METRICS:
+        dkey, _ = CATE_METRICS[city]
         for fid, cname in CATE_COLS.items():
             v = getn(row, fid)
             if v is not None:
-                category.setdefault(cname, {})["flow"] = v
-    elif city == "数量":
-        for fid, cname in CATE_COLS.items():
-            v = getn(row, fid)
-            if v is not None:
-                category.setdefault(cname, {})["qty"] = v
-    elif city == "折扣":
-        for fid, cname in CATE_COLS.items():
-            v = getn(row, fid)
-            if v is not None:
-                category.setdefault(cname, {})["disc"] = v
-    elif city == "同比":
-        for fid, cname in CATE_COLS.items():
-            v = getn(row, fid)
-            if v is not None:
-                category.setdefault(cname, {})["yoy"] = v
+                category[cname][dkey] = v
+
+# 品类补充字段: match_lbl (基于yoy方向)
+for cname, cd in category.items():
+    cd["match_lbl"] = "增长" if cd.get("yoy", 0) > 0 else ("下降" if cd.get("yoy", 0) < 0 else "持平")
 
 # ── 5. 服装品类(子品类 sub_ps) ──
 sub_ps = []
