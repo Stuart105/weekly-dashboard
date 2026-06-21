@@ -67,8 +67,8 @@ class DashboardHandler(http.server.SimpleHTTPRequestHandler):
     def _handle_feishu(self):
         """Fetch data from Feishu Bitable and return as DATA JSON"""
         try:
-            from feishu_fetch import fetch_dashboard_data
-            data = fetch_dashboard_data()
+            from feishu_fetch import fetch
+            data = fetch()
             self.send_response(200)
             self._json_headers()
             self.end_headers()
