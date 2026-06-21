@@ -1,0 +1,46 @@
+name: 🔄 更新周报数据
+
+on:
+  workflow_dispatch:          # 手动触发
+  schedule:
+    - cron: '0 0 * * 1'       # 每周一北京时间 8:00 (UTC 0:00)
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write          # 允许推送提交
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装依赖
+        run: pip install requests
+
+      - name: 从飞书获取数据并更新仪表板
+        env:
+          FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
+          # 以下已有默认值，如需覆盖可在仓库 Secrets 中设置
+          FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID || 'cli_a931cdfb8bf89bb5' }}
+          FEISHU_BASE_ID: ${{ secrets.FEISHU_BASE_ID || 'XJAZbw1rqaWHMnsVAJIci7ttnJd' }}
+        run: python feishu_build.py
+
+      - name: 提交并推送更新
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add weekly-dashboard.html index.html
+          if git diff --cached --quiet; then
+            echo "数据无变化，跳过提交"
+          else
+            PERIOD=$(grep -oP '"period":\s*"\K[^"]+' weekly-dashboard.html | head -1)
+            git commit -m "🤖 自动更新: $PERIOD 周报数据 [skip ci]"
+            git push
+            echo "✅ 已推送 $PERIOD 数据更新"
+          fi

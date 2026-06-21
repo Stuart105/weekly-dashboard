@@ -19,7 +19,7 @@ from datetime import datetime
 BASE = Path(__file__).parent
 UPLOAD_DIR = BASE / 'uploads'
 UPLOAD_DIR.mkdir(exist_ok=True)
-PORT = 8000
+PORT = int(os.environ.get('PORT', '8000'))
 
 # Read API key
 API_KEY = os.environ.get('DEEPSEEK_API_KEY', '')
