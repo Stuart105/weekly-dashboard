@@ -1,5 +1,5 @@
 """飞书多维表格 → Dashboard DATA"""
-import os, re, requests
+import os, re, requests, sys
 
 APP_ID = os.environ.get("FEISHU_APP_ID", "cli_a931cdfb8bf89bb5")
 APP_SECRET = os.environ.get("FEISHU_APP_SECRET", "")
@@ -15,16 +15,48 @@ if not APP_SECRET:
                 APP_SECRET = line.split("=", 1)[1].strip().strip('"').strip("'")
             elif line.startswith("FEISHU_APP_ID="):
                 APP_ID = line.split("=", 1)[1].strip().strip('"').strip("'")
+            elif line.startswith("FEISHU_BASE_ID="):
+                BASE_ID = line.split("=", 1)[1].strip().strip('"').strip("'")
 
 def _auth():
-    r = requests.post("https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal",
-        json={"app_id": APP_ID, "app_secret": APP_SECRET}, timeout=10)
-    return "Bearer " + r.json()["tenant_access_token"]
+    """获取 tenant_access_token，认证失败时抛出明确的异常"""
+    if not APP_SECRET:
+        raise RuntimeError(
+            "飞书 APP_SECRET 未配置。请在 .env 文件中设置 FEISHU_APP_SECRET=你的密钥，"
+            "或设置环境变量 FEISHU_APP_SECRET"
+        )
+    try:
+        r = requests.post(
+            "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal",
+            json={"app_id": APP_ID, "app_secret": APP_SECRET},
+            timeout=10
+        )
+        resp = r.json()
+    except requests.exceptions.RequestException as e:
+        raise RuntimeError(f"飞书认证请求失败(网络/超时): {e}")
+    except ValueError:
+        raise RuntimeError(f"飞书认证响应无效(非JSON): {r.text[:200]}")
+
+    if r.status_code != 200:
+        raise RuntimeError(
+            f"飞书认证失败 HTTP {r.status_code}: {resp.get('msg', resp)}"
+        )
+    if "tenant_access_token" not in resp:
+        raise RuntimeError(
+            f"飞书认证失败，未获取到 token。响应: {resp.get('msg', resp)}。"
+            f"请检查 FEISHU_APP_ID 和 FEISHU_APP_SECRET 是否正确。"
+        )
+    return "Bearer " + resp["tenant_access_token"]
 
 def _get(path, params=None):
     r = requests.get(f"https://open.feishu.cn/open-apis{path}",
         headers={"Authorization": _auth()}, params=params, timeout=15)
-    return r.json()
+    resp = r.json()
+    if r.status_code != 200:
+        raise RuntimeError(
+            f"飞书 API 请求失败 HTTP {r.status_code}: {resp.get('msg', resp)} (path={path})"
+        )
+    return resp
 
 def _read_all(tid):
     items, pt = [], None
@@ -32,7 +64,11 @@ def _read_all(tid):
         p = {"page_size": 200}
         if pt: p["page_token"] = pt
         d = _get(f"/bitable/v1/apps/{BASE_ID}/tables/{tid}/records", p)
-        if "data" not in d: break
+        if "data" not in d:
+            raise RuntimeError(
+                f"飞书多维表格读取失败，响应中缺少 data 字段。"
+                f"表ID={tid}, 响应: {d.get('msg', d)}"
+            )
         for it in d["data"].get("items", []):
             f = {}
             for k, v in it.get("fields", {}).items():
@@ -50,7 +86,16 @@ def _num(s):
     except: return 0
 
 def fetch():
-    kpi = _read_all("tblmGijNaVv80ogT")
+    try:
+        kpi = _read_all("tblmGijNaVv80ogT")
+    except Exception as e:
+        print(f"[feishu_fetch] 读取表格失败: {e}", file=sys.stderr)
+        raise
+
+    if not kpi:
+        raise RuntimeError(
+            "飞书多维表格中没有数据。请确认表格 tblmGijNaVv80ogT 中已填入周报数据。"
+        )
 
     period, week_range = "W??", ""
     for row in kpi:
@@ -66,6 +111,11 @@ def fetch():
         count = sum(1 for v in row.values() if _num(v) != 0)
         if count > best_count:
             best_row, best_count = row, count
+
+    if best_count == 0:
+        raise RuntimeError(
+            "飞书多维表格中所有行数据均为空或无效。请确认表格中已填入数值数据。"
+        )
 
     metrics = {}
     for fid, val in best_row.items():

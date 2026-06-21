@@ -75,6 +75,8 @@ class DashboardHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(json.dumps(data, ensure_ascii=False).encode('utf-8'))
         except Exception as e:
             self._json_error(500, f'飞书获取失败: {e}')
+
+    def _handle_upload(self):
         """Handle Excel upload → auto build + deploy"""
         try:
             content_type = self.headers.get('Content-Type', '')
@@ -259,6 +261,8 @@ function doUpload(){{
         self._json_headers()
         self.end_headers()
         self.wfile.write(json.dumps({'status': 'error', 'message': msg}, ensure_ascii=False).encode('utf-8'))
+
+    def _proxy_deepseek(self):
         """Proxy request to DeepSeek API"""
         try:
             # Read request body
