@@ -29,7 +29,7 @@ jobs:
           # 以下已有默认值，如需覆盖可在仓库 Secrets 中设置
           FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID || 'cli_a931cdfb8bf89bb5' }}
           FEISHU_BASE_ID: ${{ secrets.FEISHU_BASE_ID || 'XJAZbw1rqaWHMnsVAJIci7ttnJd' }}
-        run: python feishu_build.py
+        run: python feishu/feishu_build.py
 
       - name: 提交并推送更新
         run: |

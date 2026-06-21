@@ -5,9 +5,9 @@ DeepSeek AI 注入脚本 v2 — 读取独立JS文件，替换占位符后注入H
 import base64, os
 from pathlib import Path
 
-BASE = Path(__file__).parent
+BASE = Path(__file__).parent.parent
 HTML_FILE = BASE / 'weekly-dashboard.html'
-JS_FILE = BASE / 'deepseek_analyzer.js'
+JS_FILE = BASE / 'ai' / 'deepseek_analyzer.js'
 
 # Read API key
 api_key = os.environ.get('DEEPSEEK_API_KEY', '')

@@ -7,7 +7,7 @@ BASE_ID = os.environ.get("FEISHU_BASE_ID", "XJAZbw1rqaWHMnsVAJIci7ttnJd")
 
 # Fallback: read from .env
 if not APP_SECRET:
-    env_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+    env_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '.env')
     if os.path.exists(env_file):
         for line in open(env_file):
             line = line.strip()

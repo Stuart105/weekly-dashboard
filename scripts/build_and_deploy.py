@@ -1,11 +1,11 @@
 """一键构建 + 部署 — 方案A 每周更新
-用法: python3 build_and_deploy.py [Excel文件路径] [提交信息]
+用法: python3 scripts/build_and_deploy.py [Excel文件路径] [提交信息]
 """
 import subprocess, sys, shutil, os
 from pathlib import Path
 from datetime import datetime
 
-BASE = Path(__file__).parent
+BASE = Path(__file__).parent.parent
 excel = sys.argv[1] if len(sys.argv) > 1 else None
 msg = sys.argv[2] if len(sys.argv) > 2 else f"W{datetime.now().strftime('%W')} 周报更新"
 
@@ -18,7 +18,7 @@ if excel:
 
 print("🔨 构建 Dashboard...")
 subprocess.run([sys.executable, 'build_dashboard.py'], cwd=BASE)
-subprocess.run([sys.executable, 'deepseek_inject.py'], cwd=BASE)
+subprocess.run([sys.executable, 'ai/deepseek_inject.py'], cwd=BASE)
 
 # 复制为 index.html
 shutil.copy(BASE / 'weekly-dashboard.html', BASE / 'index.html')

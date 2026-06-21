@@ -1,36 +1,24 @@
-# WorkBuddy 项目文件
-.workbuddy/
-
 # 临时文件和脚本
-_tmp_*/
 *.tmp
 *.log
 server.log
-
-# Python 缓存
 __pycache__/
 *.pyc
 *.pyo
 
-# 沙箱测试
-sandbox_test/
-
-# 敏感数据 — 绝不要提交
+# 敏感数据
 extracted_data.json
 .env
 deepseek_config.json
 ai_analysis.json
 
-# 构建产物（由 build_dashboard.py 生成，需在 git 中保留用于 EdgeOne 部署）
-# index.html — 保留，EdgeOne Pages 需要此文件作为入口
+# 周报产物 —— 每周生成的分析报告和数据，不提交到 Git
+# （这些文件在本地 data/ 和 reports/ 目录中，由脚本自动生成）
+data/
+reports/
 
-# 旧版报告归档
-W23*/
-W24*
-
-# 修复脚本（已合并到主文件）
-fix_season.js
-fix_season.py
+# 本地调试
+uploads/
 
 # IDE
 .vscode/
