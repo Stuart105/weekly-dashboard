@@ -1308,7 +1308,13 @@ function parseExcelWorkbook(wb){{
   }}
   if(!wsMain){{ for(let i=0;i<sNames.length;i++){{ if(!wsMain&&findRow(wb.Sheets[sNames[i]],'KPI',1)>0) wsMain=wb.Sheets[sNames[i]]; }} }}
   if(!wsMain) throw new Error('未找到周报数据表(KPI行)');
-  function cv(s,r,c){{ const cell=s[XLSX.utils.encode_cell({{r:r-1,c:c-1}})]; if(!cell||cell.v===undefined||cell.v===null) return null; var v=cell.v,sv=String(v); if(sv.charAt(0)==='#'&&sv.length<=7) return null; if(typeof v==='string'){{ var cl=v.replace(/[,，¥￥\\s]/g,''); var n=Number(cl); return isNaN(n)?v:n; }} return v; }}
+  // 核心改进: sheet→二维数组，O(1)取值，消除xlsx类型不确定性
+  const Am=XLSX.utils.sheet_to_json(wsMain,{{header:1,defval:null}});
+  const As=wsSeas?XLSX.utils.sheet_to_json(wsSeas,{{header:1,defval:null}}):null;
+  const Au=wsMember?XLSX.utils.sheet_to_json(wsMember,{{header:1,defval:null}}):null;
+  function get(arr,r,c){{ if(!arr)return null;var row=arr[r-1];if(!row)return null;return row[c-1]!==null&&row[c-1]!==undefined?row[c-1]:null; }}
+  function gn(arr,r,c){{ var v=get(arr,r,c); if(v===null||v===undefined||v==='') return 0; var n=Number(v); return isNaN(n)?0:n; }}
+  function gs(arr,r,c){{ var v=get(arr,r,c); return v!==null&&v!==undefined?String(v):''; }}
   const kpiRow=findRow(wsMain,'KPI')||7;
   const priceRow=findRow(wsMain,'件单价')||(kpiRow+8);
   const dailyStart=kpiRow+14;
@@ -1318,61 +1324,60 @@ function parseExcelWorkbook(wb){{
   const subPsStart=findRow(wsMain,'裙类')||findRow(wsMain,'器配',4)||91;
   const topStart=findRow(wsMain,'TOP')||findRow(wsMain,'TOP商品')||123;
   const discStart=findRow(wsMain,'单件')||208;
-  const store=cv(wsMain,2,1)||'未知店铺';
-  const rawP=cv(wsMain,2,23)||''; const pM=rawP.match(/W(\\d+)/);
+  const store=gs(Am,2,1)||'未知店铺';
+  const rawP=gs(Am,2,23); const pM=rawP.match(/W(\\d+)/);
   const period=pM?pM[0]:'W??', weekRange=rawP.replace(/W\\d+周累计[：:]\\s*/,'').replace(/至/g,'-')||'';
-  const r7={{}}; [4,5,6,7,8,10,12,14,17,20,22,24,28,33,35,36,37,39].forEach(c=>r7[c]=cv(wsMain,kpiRow,c));
-  const r15={{}}; [4,6,8,10,12,14,16,18,20,22,24,28,30,32].forEach(c=>r15[c]=cv(wsMain,priceRow,c));
+  const r7={{}}; [4,5,6,7,8,10,12,14,17,20,22,24,28,33,35,36,37,39].forEach(c=>r7[c]=gn(Am,kpiRow,c));
+  const r15={{}}; [4,6,8,10,12,14,16,18,20,22,24,28,30,32].forEach(c=>r15[c]=gn(Am,priceRow,c));
   const dayC=[4,6,8,10,12,14,16,18], dn=['周一','周二','周三','周四','周五','周六','周日'];
-  const daily=[]; for(let i=0;i<7;i++) daily.push({{n:dn[i],t:Number(cv(wsMain,dailyStart+0,dayC[i]))||0,f:Number(cv(wsMain,dailyStart+1,dayC[i]))||0,a:(Number(cv(wsMain,dailyStart+2,dayC[i]))||0)*100,y:(Number(cv(wsMain,dailyStart+3,dayC[i]))||0)*100,c:(Number(cv(wsMain,dailyStart+6,dayC[i]))||0)*100,v:Math.round(Number(cv(wsMain,dailyStart+7,dayC[i]))||0),tk:Number(cv(wsMain,dailyStart+8,dayC[i]))||0,at:Number(cv(wsMain,dailyStart+9,dayC[i]))||0}});
+  const daily=[]; for(let i=0;i<7;i++) daily.push({{n:dn[i],t:gn(Am,dailyStart+0,dayC[i]),f:gn(Am,dailyStart+1,dayC[i]),a:gn(Am,dailyStart+2,dayC[i])*100,y:gn(Am,dailyStart+3,dayC[i])*100,c:gn(Am,dailyStart+6,dayC[i])*100,v:Math.round(gn(Am,dailyStart+7,dayC[i])),tk:gn(Am,dailyStart+8,dayC[i]),at:gn(Am,dailyStart+9,dayC[i])}});
   const catC={{'14':'鞋','16':'服','18':'器配','4':'男','6':'女','10':'童'}}; const catData={{}};
   for(const[col,nm]of Object.entries(catC)){{ 
     const cn=parseInt(col); 
-    const isProduct=cn>=14; // cols 14/16/18 = product group
-    const f=Number(cv(wsMain,cateStart+1,cn))||0; 
-    const ss=Number(cv(wsMain,cateStart+12,cn))||0; 
-    catData[nm]={{flow:f,qty:Number(cv(wsMain,cateStart+2,cn))||0,disc:(Number(cv(wsMain,cateStart+3,cn))||0)*100,yoy:(Number(cv(wsMain,cateStart+7,cn))||0)*100,mom:(Number(cv(wsMain,cateStart+5,cn))||0)*100,f_share:(Number(cv(wsMain,cateStart+9,cn))||0)*100,group:isProduct?'product':'gender',sku_s:ss,s_qty:Number(cv(wsMain,cateStart+17,cn))||0,s_sku:Number(cv(wsMain,cateStart+18,cn))||0,sku_u:(Number(cv(wsMain,cateStart+15,cn))||0)*100,sat:(Number(cv(wsMain,cateStart+21,cn))||0)*100,st:(Number(cv(wsMain,cateStart+22,cn))||0)*100}};
+    const isProduct=cn>=14;
+    const f=gn(Am,cateStart+1,cn), ss=gn(Am,cateStart+12,cn);
+    catData[nm]={{flow:f,qty:gn(Am,cateStart+2,cn),disc:gn(Am,cateStart+3,cn)*100,yoy:gn(Am,cateStart+7,cn)*100,mom:gn(Am,cateStart+5,cn)*100,f_share:gn(Am,cateStart+9,cn)*100,group:isProduct?'product':'gender',sku_s:ss,s_qty:gn(Am,cateStart+17,cn),s_sku:gn(Am,cateStart+18,cn),sku_u:gn(Am,cateStart+15,cn)*100,sat:gn(Am,cateStart+21,cn)*100,st:gn(Am,cateStart+22,cn)*100}};
   }}
   const tsq=Object.values(catData).filter(c=>c.group==='product').reduce((s,c)=>s+(c.s_qty||0),0);
   for(const[nm,cd]of Object.entries(catData)){{ if(cd.group!=='product') continue; const sqs=tsq>0?(cd.s_qty/tsq*100):0,fs=cd.f_share; cd.s_q_share=sqs; cd.gap=fs-sqs; cd.match_lbl=Math.abs(fs-sqs)<=5?'匹配':(fs>sqs?'销>库+'+((fs-sqs).toFixed(1))+'pp':'库>销'+((sqs-fs).toFixed(1))+'pp'); }}
   const topData={{}}; const tl={{'0':'TOP10','1':'TOP20','2':'TOP40','3':'TOP60','4':'TOP100'}};
-  for(let i=0;i<5;i++){{ const r=topStart+i,d4=cv(wsMain,r,4),d6=cv(wsMain,r,6); if(d4!==null||d6!==null) topData[tl[String(i)]]={{'4':(Number(d4)||0)*100,'6':(Number(d6)||0)*100,'8':(Number(cv(wsMain,r,8))||0)*100,'10':(Number(cv(wsMain,r,10))||0)*100,'13':(Number(cv(wsMain,r,13))||0)*100}}; }}
+  for(let i=0;i<5;i++){{ const r=topStart+i,d4=get(Am,r,4),d6=get(Am,r,6); if(d4!==null||d6!==null) topData[tl[String(i)]]={{'4':(Number(d4)||0)*100,'6':(Number(d6)||0)*100,'8':gn(Am,r,8)*100,'10':gn(Am,r,10)*100,'13':gn(Am,r,13)*100}}; }}
   const subPs=[]; let inSubPs=false, inAcc=false;
   for(let r=subPsStart;r<=subPsStart+40&&r<=180;r++){{
-    const label=cv(wsMain,r,1); const flow=cv(wsMain,r,8);
+    const label=gs(Am,r,1); const flow=gn(Am,r,8);
     if(label==='合计'&&inSubPs&&!inAcc){{ inAcc=true; continue; }}
     if(label==='合计'&&inAcc) break;
-    if(label&&flow&&Number(flow)&&!String(label).includes('器配')&&!String(label).includes('奥莱')&&!String(label).includes('销售')){{
+    if(label&&flow&&!label.includes('器配')&&!label.includes('奥莱')&&!label.includes('销售')){{
       if(!inSubPs) inSubPs=true;
-      const disc=cv(wsMain,r,10);
-      if(inAcc) subPs.push({{isAcc:true,n:String(label),f:Number(flow),d:Number(disc)?Number(disc)*100:0,q:cv(wsMain,r,4)?Math.round(Number(cv(wsMain,r,4))):0}});
-      else subPs.push({{isAcc:false,n:String(label),f:Number(flow),d:Number(disc)?Number(disc)*100:0,q:cv(wsMain,r,4)?Math.round(Number(cv(wsMain,r,4))):0}});
+      const disc=gn(Am,r,10), qty=gn(Am,r,4);
+      const entry={{isAcc:!!inAcc,n:label,f:flow,d:disc?disc*100:0,q:qty?Math.round(qty):0}};
+      subPs.push(entry);
     }}
   }}
   const shoeSeries=[];
   for(let r=shoeStart+1;r<=shoeStart+20&&r<=120;r++){{
-    const label=cv(wsMain,r,1); if(label==='合计') break;
-    const flow=cv(wsMain,r,8);
-    if(label&&flow&&Number(flow)) shoeSeries.push({{n:String(label),f:Number(flow),q:cv(wsMain,r,4)?Math.round(Number(cv(wsMain,r,4))):0,d:(Number(cv(wsMain,r,10))||0)*100}});
+    const label=gs(Am,r,1); if(label==='合计') break;
+    const flow=gn(Am,r,8);
+    if(label&&flow) shoeSeries.push({{n:label,f:flow,q:gn(Am,r,4)?Math.round(gn(Am,r,4)):0,d:gn(Am,r,10)*100}});
   }}
   const seasData={{}};
-  if(wsSeas){{
+  if(As){{
     const sHdr=findRow(wsSeas,'产品季',4)||3;
     const seasFlowRow=findRow(wsSeas,'流水',1)||sHdr+2;
     const seasDiscRow=seasFlowRow+2; const seasQtyRow=seasFlowRow+1;
     const seasSkuURow=findRow(wsSeas,'SKU动销',1)||16;
     const seasSatRow=findRow(wsSeas,'无可补',1)||25;
     const seasKeys=[['4','2025Q4及以前(服)'],['6','2026Q1(服)'],['8','2026Q2(服)'],['10','2026Q3+(服)'],['13','26年常青(服)'],['15','2025Q4及以前(鞋)'],['18','2026Q1(鞋)'],['20','2026Q2(鞋)'],['22','2026Q3+(鞋)'],['25','26年常青(鞋)']];
-    for(const[ck,lb]of seasKeys){{ const cn=parseInt(ck); const f=cv(wsSeas,seasFlowRow,cn); if(f!==null) seasData[lb]={{f:Number(f),d:(Number(cv(wsSeas,seasDiscRow,cn))||0)*100,q:Math.round(Number(cv(wsSeas,seasQtyRow,cn))||0),su:(Number(cv(wsSeas,seasSkuURow,cn))||0)*100,sat:(Number(cv(wsSeas,seasSatRow,cn))||0)*100}}; }}
+    for(const[ck,lb]of seasKeys){{ const cn=parseInt(ck); const f=get(As,seasFlowRow,cn); if(f!==null) seasData[lb]={{f:Number(f),d:gn(As,seasDiscRow,cn)*100,q:Math.round(gn(As,seasQtyRow,cn)),su:gn(As,seasSkuURow,cn)*100,sat:gn(As,seasSatRow,cn)*100}}; }}
   }}
   const discRange={{}};
-  for(let r=discStart;r<=discStart+3&&r<=220;r++){{ const label=cv(wsMain,r,1); if(!label) continue; discRange[String(r)]={{label:String(label),cols:{{}}}}; for(let c=1;c<=15;c++){{ const v=cv(wsMain,r,c); if(v!==null&&v!==undefined) discRange[String(r)].cols[String(c)]=v; }} }}
+  for(let r=discStart;r<=discStart+3&&r<=220;r++){{ const label=gs(Am,r,1); if(!label) continue; discRange[String(r)]={{label:label,cols:{{}}}}; for(let c=1;c<=15;c++){{ var v=get(Am,r,c); if(v!==null&&v!==undefined) discRange[String(r)].cols[String(c)]=v; }} }}
   const memberData=[];
-  if(wsMember){{ const memStart=findRow(wsMember,'销售')-1||7; for(let r=memStart;r<=memStart+15&&r<=30;r++){{ const id=cv(wsMember,r,1); const name=cv(wsMember,r,3); const sales=cv(wsMember,r,9); if(name&&sales&&Number(sales)>0) memberData.push({{id:String(id||''),name:String(name),sales:Number(sales),qty:Math.round(Number(cv(wsMember,r,10))||0),unitPrice:Number(cv(wsMember,r,11)||0),avgTicket:Number(cv(wsMember,r,12)||0),attach:Number(cv(wsMember,r,13)||0),shoePct:(Number(cv(wsMember,r,15))||0)*100,clothPct:(Number(cv(wsMember,r,16))||0)*100,o2o:Number(cv(wsMember,r,17))||0}}); }} }}
-  const t=Number(r7[14])||0,act=Number(r7[17])||0,ach=(Number(r7[20])||0)*100,co=(Number(r7[5])||0)*100,fl=Number(r7[8])||0,ss=(Number(r7[24])||0)*100,yo=(Number(r7[22])||0)*100,mo=(Number(r7[28])||0)*100;
-  const oo=Number(r7[33])||0,op=(Number(r7[35])||0)*100,pd=Number(r7[37])||0,ol=Number(r7[39])||0;
-  const at=Number(r15[10])||0,up=Number(r15[4])||0,ar=Number(r15[16])||0,di=(Number(r15[28])||0)*100,tc=Number(r15[22])||0;
-  const cy=(Number(r7[6])||0)*100,fy=(Number(r7[10])||0)*100,ay=(Number(r15[12])||0)*100,ayy=(Number(r15[18])||0)*100,uy=(Number(r15[6])||0)*100,dy=(Number(r15[30])||0)*100,om=(Number(r7[36])||0)*100,cm=(Number(r7[7])||0)*100,fm=(Number(r7[12])||0)*100;
+  if(Au){{ const memStart=findRow(wsMember,'销售')-1||7; for(let r=memStart;r<=memStart+15&&r<=30;r++){{ const id=gs(Au,r,1); const name=gs(Au,r,3); const sales=gn(Au,r,9); if(name&&sales>0) memberData.push({{id:id,name:name,sales:sales,qty:Math.round(gn(Au,r,10)),unitPrice:gn(Au,r,11),avgTicket:gn(Au,r,12),attach:gn(Au,r,13),shoePct:gn(Au,r,15)*100,clothPct:gn(Au,r,16)*100,o2o:gn(Au,r,17)}}); }} }}
+  const t=r7[14],act=r7[17],ach=r7[20]*100,co=r7[5]*100,fl=r7[8],ss=r7[24]*100,yo=r7[22]*100,mo=r7[28]*100;
+  const oo=r7[33],op=r7[35]*100,pd=r7[37],ol=r7[39];
+  const at=r15[10],up=r15[4],ar=r15[16],di=r15[28]*100,tc=r15[22];
+  const cy=r7[6]*100,fy=r7[10]*100,ay=r15[12]*100,ayy=r15[18]*100,uy=r15[6]*100,dy=r15[30]*100,om=r7[36]*100,cm=r7[7]*100,fm=r7[12]*100;
   const mfmt=v=>v>=10000?((v/10000).toFixed(1)+'万'):('¥'+v.toFixed(0));
   const mat=[['流水达成率',ach.toFixed(2)+'%',(yo>0?'+':'')+yo.toFixed(2)+'%',(mo>0?'+':'')+mo.toFixed(2)+'%'],['成交率',co.toFixed(2)+'%',(cy>0?'+':'')+cy.toFixed(2)+'%pp',(cm>0?'+':'')+cm.toFixed(2)+'%pp'],['日均客流',fl.toFixed(0)+'人',(fy>0?'+':'')+fy.toFixed(2)+'%',(fm>0?'+':'')+fm.toFixed(2)+'%'],['客单价',(at>=10000?((at/10000).toFixed(1)+'万'):('¥'+at.toFixed(0))),(ay>0?'+':'')+ay.toFixed(2)+'%',(ay>0?'+':'')+ay.toFixed(2)+'%'],['连带率',ar.toFixed(2)+'件',(ayy>0?'+':'')+ayy.toFixed(2)+'%',(ayy>0?'+':'')+ayy.toFixed(2)+'%'],['件单价',(up>=10000?((up/10000).toFixed(1)+'万'):('¥'+up.toFixed(0))),(uy>0?'+':'')+uy.toFixed(2)+'%',(uy>0?'+':'')+uy.toFixed(2)+'%'],['折扣率',di.toFixed(2)+'%',(dy>0?'+':'')+dy.toFixed(2)+'%pp',(dy>0?'+':'')+dy.toFixed(2)+'%pp'],['O2O流水',(oo>=10000?((oo/10000).toFixed(1)+'万'):('¥'+oo.toFixed(0))),'--',(om>0?'+':'')+om.toFixed(2)+'%'],['SSSG',(ss>0?'+':'')+ss.toFixed(2)+'%',(ss>0?'+':'')+ss.toFixed(2)+'%',(mo>0?'+':'')+mo.toFixed(2)+'%']];
   const sh=catData['鞋']?catData['鞋'].f_share:0,su=catData['鞋']?catData['鞋'].sku_u:0;
