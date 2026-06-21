@@ -265,16 +265,34 @@ for row in rows:
 # 飞书表格中折扣区间数据与TOP商品混排, 暂不覆盖
 disc_range = None  # 保留 DATA 中已有的 disc_range
 
-# ── 9. 季节数据 (从 tblhxVtkScorpwxQ 产品季节表) ──
+# ── 9. 季节数据 (从 tblhxVtkScorpwxQ 产品季节表, 3段) ──
 SEAS_TABLE = "tblhxVtkScorpwxQ"
-# 列 → 季节名映射 (基于行2标签)
-SEAS_COLS = {
-    "服": "2025Q4及以前(服)", "字段 4": "2026Q1(服)", "字段 6": "2026Q2(服)",
-    "字段 8": "2026Q3+(服)", "字段 11": "26年常青(服)",
-    "鞋": "2025Q4及以前(鞋)", "字段 15": "2026Q1(鞋)", "字段 17": "2026Q2(鞋)",
-    "字段 19": "2026Q3+(鞋)", "字段 22": "26年常青(鞋)",
+# 段1列映射: 总服 + 总鞋
+SEC1_COLS = {
+    "服": "2025Q4及以前(总服)", "字段 4": "2026Q1(总服)", "字段 6": "2026Q2(总服)",
+    "字段 8": "2026Q3+(总服)", "字段 11": "26年常青(总服)",
+    "鞋": "2025Q4及以前(总鞋)", "字段 15": "2026Q1(总鞋)", "字段 17": "2026Q2(总鞋)",
+    "字段 19": "2026Q3+(总鞋)", "字段 22": "26年常青(总鞋)",
 }
-# 指标行 → seas字段
+# 段2(男服/女服): 服=男服, 鞋=女服 → 字段4/6/8/11=男服各季, 15/17/19/22=女服各季
+SEC2_COLS_MALE = {
+    "服": "2025Q4及以前(男服)", "字段 4": "2026Q1(男服)", "字段 6": "2026Q2(男服)",
+    "字段 8": "2026Q3+(男服)", "字段 11": "26年常青(男服)",
+}
+SEC2_COLS_FEMALE = {
+    "鞋": "2025Q4及以前(女服)", "字段 15": "2026Q1(女服)", "字段 17": "2026Q2(女服)",
+    "字段 19": "2026Q3+(女服)", "字段 22": "26年常青(女服)",
+}
+# 段3(男鞋/女鞋): 服=男鞋, 鞋=女鞋 → 字段4/6/8/11=男鞋各季, 15/17/19/22=女鞋各季
+SEC3_COLS_MALE = {
+    "服": "2025Q4及以前(男鞋)", "字段 4": "2026Q1(男鞋)", "字段 6": "2026Q2(男鞋)",
+    "字段 8": "2026Q3+(男鞋)", "字段 11": "26年常青(男鞋)",
+}
+SEC3_COLS_FEMALE = {
+    "鞋": "2025Q4及以前(女鞋)", "字段 15": "2026Q1(女鞋)", "字段 17": "2026Q2(女鞋)",
+    "字段 19": "2026Q3+(女鞋)", "字段 22": "26年常青(女鞋)",
+}
+
 SEAS_METRICS = {
     "流水": ("f", 0), "数量": ("q", 0), "折扣": ("d", 0),
     "流水占比": ("fs", 0), "环比": ("mom", 0), "SKU(个数)": ("sku", 0),
@@ -282,31 +300,68 @@ SEAS_METRICS = {
     "吊牌价": ("tag_price", 0), "同比": ("yoy", 0),
 }
 
-seas = {}
 r2 = requests.get(f"https://open.feishu.cn/open-apis/bitable/v1/apps/{BASE_ID}/tables/{SEAS_TABLE}/records",
     headers={"Authorization": TOKEN}, params={"page_size": 100}, timeout=15)
 seas_items = r2.json().get("data", {}).get("items", [])
 seas_rows = [item.get("fields", {}) for item in seas_items]
 
-for row in seas_rows:
-    metric_name = (row.get("大类别") or "").replace("\n", "")
-    if metric_name in SEAS_METRICS:
-        dkey, default = SEAS_METRICS[metric_name]
-        for fid, season_key in SEAS_COLS.items():
-            v = _num(row.get(fid))
-            if v is not None:
-                seas.setdefault(season_key, {})[dkey] = v
-    if metric_name == "大类别":
-        break  # 第一区段结束(后面是男女拆分段)
+seas = {}; mid_agg = {"男服": {}, "女服": {}, "男鞋": {}, "女鞋": {}}
 
-# su(售罄率)计算: flow / tag_price * 100 if tag_price > 0
+# 段1: 行3-25 (总服+总鞋)
+for row in seas_rows:
+    mn = (row.get("大类别") or "").replace("\n", "")
+    if mn == "大类别": break  # 段1结束
+    if mn in SEAS_METRICS:
+        dkey, _ = SEAS_METRICS[mn]
+        for fid, sk in SEC1_COLS.items():
+            v = _num(row.get(fid))
+            if v is not None: seas.setdefault(sk, {})[dkey] = v
+
+# 段2: 行27-52 (男服+女服) — 从第二个"大类别"行之后开始
+sec2_start = next((i for i,r in enumerate(seas_rows) if r.get("大类别","") == "大类别" and i > 0), None)
+if sec2_start:
+    # 段2 - 男服数据(服列) + 女服数据(鞋列)
+    for row in seas_rows[sec2_start+3:]:  # 跳过 header 行
+        mn = (row.get("大类别") or "").replace("\n", "")
+        if mn == "大类别": break  # 段2结束
+        if mn in SEAS_METRICS:
+            dkey, _ = SEAS_METRICS[mn]
+            # 男服
+            for fid, sk in SEC2_COLS_MALE.items():
+                v = _num(row.get(fid))
+                if v is not None: seas.setdefault(sk, {})[dkey] = v
+                if dkey == "f" and v: mid_agg.setdefault("男服", {}).setdefault("f", 0); mid_agg["男服"]["f"] += v
+            # 女服
+            for fid, sk in SEC2_COLS_FEMALE.items():
+                v = _num(row.get(fid))
+                if v is not None: seas.setdefault(sk, {})[dkey] = v
+                if dkey == "f" and v: mid_agg.setdefault("女服", {}).setdefault("f", 0); mid_agg["女服"]["f"] += v
+
+# 段3: 行54-79 (男鞋+女鞋) — 从第三个"大类别"行之后
+sec3_start = next((i for i,r in enumerate(seas_rows) if r.get("大类别","") == "大类别" and i > sec2_start), None) if sec2_start else None
+if sec3_start:
+    for row in seas_rows[sec3_start+3:]:
+        mn = (row.get("大类别") or "").replace("\n", "")
+        if mn == "大类别": break
+        if mn in SEAS_METRICS:
+            dkey, _ = SEAS_METRICS[mn]
+            # 男鞋
+            for fid, sk in SEC3_COLS_MALE.items():
+                v = _num(row.get(fid))
+                if v is not None: seas.setdefault(sk, {})[dkey] = v
+                if dkey == "f" and v: mid_agg.setdefault("男鞋", {}).setdefault("f", 0); mid_agg["男鞋"]["f"] += v
+            # 女鞋
+            for fid, sk in SEC3_COLS_FEMALE.items():
+                v = _num(row.get(fid))
+                if v is not None: seas.setdefault(sk, {})[dkey] = v
+                if dkey == "f" and v: mid_agg.setdefault("女鞋", {}).setdefault("f", 0); mid_agg["女鞋"]["f"] += v
+
+# su(售罄率)计算
 for key, sd in seas.items():
     if sd.get("tag_price", 0) > 0:
         sd["su"] = round(sd.get("f", 0) / sd["tag_price"] * 100, 2)
-    else:
-        sd["su"] = 0
-    sd.setdefault("sat", 0)
-    sd.setdefault("stock_qty", sd.get("stock_qty", 0))
+    else: sd["su"] = 0
+    sd.setdefault("sat", 0); sd.setdefault("stock_qty", sd.get("stock_qty", 0))
 
 # ── 构建最终 DATA 更新 ──
 all_updates = dict(kpi_updates)
@@ -316,6 +371,7 @@ all_updates["sub_ps"] = sub_ps
 all_updates["shoe"] = shoes
 all_updates["top"] = top
 all_updates["seas"] = seas
+all_updates["mid_agg"] = mid_agg
 # disc_range 暂不更新
 
 # ── 更新 HTML ──
@@ -361,4 +417,4 @@ for html_name in ('weekly-dashboard.html', 'index.html'):
 print(f"\n📊 更新完成！共更新 {updated_count} 个字段")
 print(f"   周期: {week_period} | {week_range}")
 print(f"   daily: {len(daily)} 天 | category: {len(category)} 类 | sub_ps: {len(sub_ps)} 个")
-print(f"   shoes: {len(shoes)} 个 | TOP: {len(top)} 组 | seas: {len(seas)} 季")
+print(f"   shoes: {len(shoes)} 个 | TOP: {len(top)} 组 | seas: {len(seas)} 季 | mid_agg: {len(mid_agg)} 组")
