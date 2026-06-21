@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="favicon.ico" type="image/x-icon">
-<title>W24 周报分析仪表板 | 奥莱店华南区城市 | v0621-1102</title>
+<title>W24 周报分析仪表板 | 奥莱店华南区城市 | v0621-1149</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -113,7 +113,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 <div class="toast" id="toast"></div>
 
 <div class="header">
-  <div><h1>📊 W24 周报分析仪表板 <span style="background:#ef4444;color:white;font-size:11px;padding:2px 8px;border-radius:4px;vertical-align:middle">v0621.1102</span></h1><div class="meta">奥莱店华南区城市 | 2026.06.08-06.14</div></div>
+  <div><h1>📊 W24 周报分析仪表板 <span style="background:#ef4444;color:white;font-size:11px;padding:2px 8px;border-radius:4px;vertical-align:middle">v0621.1149</span></h1><div class="meta">奥莱店华南区城市 | 2026.06.08-06.14</div></div>
   <div class="actions">
     <button class="btn btn-primary" id="btnImport" onclick="triggerImport()">📥 导入周报</button>
     <button class="btn btn-outline" onclick="refreshAllCharts()">🔄 刷新图表</button>
@@ -248,12 +248,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 <div class="section">
   <h3>🤖 智能分析</h3>
   <button class="btn btn-primary" onclick="renderAnalysis(this)" style="margin-bottom:12px">📊 开始分析</button>
+  <button class="btn btn-outline" onclick="refreshFromFeishu()" style="margin-bottom:12px;margin-left:6px;background:#22c55e;color:white;border:none">🔄 刷新飞书数据</button>
+  <div id="feishuStatus" style="display:none;margin-bottom:8px;padding:6px 12px;border-radius:6px;font-size:12px"></div>
   <div id="tab-fulltext">
     <div class="full-text" id="fullTextContent" style="color:var(--sub);font-size:13px">点击「开始分析」按钮生成分析报告。</div>
   </div>
 </div>
 
-<div class="footer">奥莱店华南区城市 | W24 周报分析仪表板 | EdgeOne Pages 部署 | 构建: 06-21 11:02 | AI店长出品</div>
+<div class="footer">奥莱店华南区城市 | W24 周报分析仪表板 | EdgeOne Pages 部署 | 构建: 06-21 11:49 | AI店长出品</div>
 
 </div>
 
@@ -535,6 +537,31 @@ function refreshAllCharts() {
   if(activeTab&&activeTab.id==='tab-cate')drawCateCharts();
   if(activeTab&&activeTab.id==='tab-seas')drawSeasCharts();
   if(activeTab&&activeTab.id==='tab-mid')drawMidCharts();
+}
+
+function refreshFromFeishu(){
+  var st=document.getElementById('feishuStatus');
+  st.style.display='block'; st.style.background='#eff6ff'; st.style.color='#3b82f6';
+  st.textContent='🔄 正在从飞书获取最新数据...';
+  fetch('/feishu/fetch').then(r=>r.json()).then(function(d){
+    if(d.period&&d.period!=='W??'){
+      DATA.store=d.store||DATA.store;
+      DATA.period=d.period;
+      DATA.week_range=d.week_range||DATA.week_range;
+      document.querySelector('.header .meta').textContent=DATA.store+' | '+DATA.week_range;
+      document.querySelector('.header h1').innerHTML='📊 '+DATA.period+' 周报分析仪表板 <span style="background:#ef4444;color:white;font-size:11px;padding:2px 8px;border-radius:4px;vertical-align:middle">飞书</span>';
+      buildKpiStrip(); initTables(); refreshAllCharts();
+      st.style.background='#f0fdf4'; st.style.color='#065f46';
+      st.innerHTML='✅ '+DATA.period+' 数据已刷新 | <a href="https://stuart105.github.io/weekly-dashboard/" target="_blank">GitHub Pages</a>';
+    }else{
+      st.style.background='#fef2f2'; st.style.color='#991b1b';
+      st.textContent='⚠️ 未获取到数据，请确认飞书表格已填入最新周报';
+    }
+  }).catch(function(e){
+    st.style.background='#fef2f2'; st.style.color='#991b1b';
+    st.textContent='⚠️ 刷新失败: 请通过CodeBuddy预览链接访问 (GitHub Pages不支持此功能)';
+    console.error(e);
+  });
 }
 
 // Full text content

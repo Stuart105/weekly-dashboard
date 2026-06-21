@@ -953,6 +953,8 @@ body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Mic
 <div class="section">
   <h3>🤖 智能分析</h3>
   <button class="btn btn-primary" onclick="renderAnalysis(this)" style="margin-bottom:12px">📊 开始分析</button>
+  <button class="btn btn-outline" onclick="refreshFromFeishu()" style="margin-bottom:12px;margin-left:6px;background:#22c55e;color:white;border:none">🔄 刷新飞书数据</button>
+  <div id="feishuStatus" style="display:none;margin-bottom:8px;padding:6px 12px;border-radius:6px;font-size:12px"></div>
   <div id="tab-fulltext">
     <div class="full-text" id="fullTextContent" style="color:var(--sub);font-size:13px">点击「开始分析」按钮生成分析报告。</div>
   </div>
@@ -1240,6 +1242,31 @@ function refreshAllCharts() {{
   if(activeTab&&activeTab.id==='tab-cate')drawCateCharts();
   if(activeTab&&activeTab.id==='tab-seas')drawSeasCharts();
   if(activeTab&&activeTab.id==='tab-mid')drawMidCharts();
+}}
+
+function refreshFromFeishu(){{
+  var st=document.getElementById('feishuStatus');
+  st.style.display='block'; st.style.background='#eff6ff'; st.style.color='#3b82f6';
+  st.textContent='🔄 正在从飞书获取最新数据...';
+  fetch('/feishu/fetch').then(r=>r.json()).then(function(d){{
+    if(d.period&&d.period!=='W??'){{
+      DATA.store=d.store||DATA.store;
+      DATA.period=d.period;
+      DATA.week_range=d.week_range||DATA.week_range;
+      document.querySelector('.header .meta').textContent=DATA.store+' | '+DATA.week_range;
+      document.querySelector('.header h1').innerHTML='📊 '+DATA.period+' 周报分析仪表板 <span style=\"background:#ef4444;color:white;font-size:11px;padding:2px 8px;border-radius:4px;vertical-align:middle\">飞书</span>';
+      buildKpiStrip(); initTables(); refreshAllCharts();
+      st.style.background='#f0fdf4'; st.style.color='#065f46';
+      st.innerHTML='✅ '+DATA.period+' 数据已刷新 | <a href=\"https://stuart105.github.io/weekly-dashboard/\" target=\"_blank\">GitHub Pages</a>';
+    }}else{{
+      st.style.background='#fef2f2'; st.style.color='#991b1b';
+      st.textContent='⚠️ 未获取到数据，请确认飞书表格已填入最新周报';
+    }}
+  }}).catch(function(e){{
+    st.style.background='#fef2f2'; st.style.color='#991b1b';
+    st.textContent='⚠️ 刷新失败: 请通过CodeBuddy预览链接访问 (GitHub Pages不支持此功能)';
+    console.error(e);
+  }});
 }}
 
 // Full text content

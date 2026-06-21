@@ -48,6 +48,8 @@ class DashboardHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path == '/upload':
             self._upload_page()
+        elif self.path == '/feishu/fetch':
+            self._handle_feishu()
         else:
             super().do_GET()
 
@@ -62,7 +64,17 @@ class DashboardHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
 
-    def _handle_upload(self):
+    def _handle_feishu(self):
+        """Fetch data from Feishu Bitable and return as DATA JSON"""
+        try:
+            from feishu_fetch import fetch_dashboard_data
+            data = fetch_dashboard_data()
+            self.send_response(200)
+            self._json_headers()
+            self.end_headers()
+            self.wfile.write(json.dumps(data, ensure_ascii=False).encode('utf-8'))
+        except Exception as e:
+            self._json_error(500, f'飞书获取失败: {e}')
         """Handle Excel upload → auto build + deploy"""
         try:
             content_type = self.headers.get('Content-Type', '')
@@ -185,6 +197,7 @@ p{{color:#64748b;margin-bottom:24px;font-size:14px}}
 input{{display:none}}
 .btn{{background:#3b82f6;color:white;border:none;padding:10px 28px;border-radius:8px;font-size:15px;cursor:pointer;font-weight:600}}
 .btn:disabled{{opacity:.5;cursor:not-allowed}}
+.btn-upload{{background:#22c55e;display:none}}
 .result{{margin-top:16px;padding:12px;border-radius:8px;font-size:14px;display:none}}
 .result.ok{{background:#f0fdf4;color:#065f46;display:block}}
 .result.error{{background:#fef2f2;color:#991b1b;display:block}}
@@ -194,32 +207,41 @@ input{{display:none}}
 <h2>📊 周报上传</h2>
 <p>上传 Excel 周报文件，自动构建并部署</p>
 <div class="zone" id="zone" onclick="document.getElementById('file').click()">
-  <p id="zoneText">点击选择文件 或拖拽到此处</p>
+  <p id="zoneText">📁 点击选择文件 或拖拽到此处</p>
 </div>
-<input type="file" id="file" accept=".xlsx,.xls" onchange="upload()">
-<button class="btn" id="btn" onclick="document.getElementById('file').click()">选择文件</button>
+<input type="file" id="file" accept=".xlsx,.xls" onchange="onFileSelected()">
+<button class="btn" id="btnSelect" onclick="document.getElementById('file').click()">选择文件</button>
+<button class="btn btn-upload" id="btnUpload" onclick="doUpload()">🚀 上传并构建</button>
 <div class="result" id="result"></div>
 </div>
 <script>
+var selectedFile = null;
 var zone = document.getElementById('zone');
 zone.ondragover = function(e){{ e.preventDefault(); zone.classList.add('drag'); }};
 zone.ondragleave = function(){{ zone.classList.remove('drag'); }};
 zone.ondrop = function(e){{ e.preventDefault(); zone.classList.remove('drag');
-  var f = e.dataTransfer.files[0]; if(f) handleFile(f); }};
-document.getElementById('file').onchange = function(){{ if(this.files[0]) handleFile(this.files[0]); }};
-function handleFile(file){{
-  var fd = new FormData(); fd.append('file', file);
+  var f = e.dataTransfer.files[0]; if(f) setFile(f); }};
+document.getElementById('file').onchange = function(){{ if(this.files[0]) setFile(this.files[0]); }};
+function onFileSelected(){{ if(document.getElementById('file').files[0]) setFile(document.getElementById('file').files[0]); }}
+function setFile(f){{
+  selectedFile = f;
+  document.getElementById('zoneText').textContent = '✅ 已选择: ' + f.name + ' (' + (f.size/1024).toFixed(1) + ' KB)';
+  document.getElementById('btnUpload').style.display = 'inline-block';
+  document.getElementById('result').className = 'result';
+}}
+function doUpload(){{
+  if(!selectedFile) return;
+  var fd = new FormData(); fd.append('file', selectedFile);
   var r = document.getElementById('result'); r.className = 'result';
-  r.textContent = '⏳ 解析中...'; r.style.display = 'block';
-  var btn = document.getElementById('btn'); btn.disabled = true;
-  document.getElementById('zoneText').textContent = '已选择: ' + file.name;
+  r.textContent = '⏳ 正在解析构建...'; r.style.display = 'block';
+  var bu = document.getElementById('btnUpload'); bu.disabled = true; bu.textContent = '处理中...';
   fetch('/upload', {{method:'POST',body:fd}}).then(function(resp){{ return resp.json(); }})
   .then(function(d){{
     if(d.status==='ok'){{ r.className = 'result ok';
       r.innerHTML = '✅ '+d.message+'<br><small>访问: <a href="'+d.url+'" target="_blank">'+d.url+'</a></small>'; }}
     else{{ r.className = 'result error'; r.textContent = '❌ '+d.message; }}
-    btn.disabled = false;
-  }}).catch(function(e){{ r.className = 'result error'; r.textContent = '❌ '+e.message; btn.disabled = false; }});
+    bu.disabled = false; bu.textContent = '🚀 上传并构建';
+  }}).catch(function(e){{ r.className = 'result error'; r.textContent = '❌ '+e.message; bu.disabled = false; bu.textContent = '🚀 上传并构建'; }});
 }}
 </script>
 </body></html>'''
