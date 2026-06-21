@@ -171,6 +171,8 @@ for html_name in ('weekly-dashboard.html', 'index.html'):
     html = html_path.read_text(encoding='utf-8')
 
     for key, val in updates.items():
+        if key == "store":
+            continue  # store 禁止覆盖，保持原值
         if isinstance(val, str):
             pattern = rf'"{re.escape(key)}":\s*"[^"]*"'
             replacement = f'"{key}": "{val}"'
