@@ -175,7 +175,7 @@ for html_name in ('weekly-dashboard.html', 'index.html'):
             pattern = rf'"{re.escape(key)}":\s*"[^"]*"'
             replacement = f'"{key}": "{val}"'
         else:
-            pattern = rf'"{re.escape(key)}":\s*[\d.]+(?:e[+-]?\d+)?'
+            pattern = rf'"{re.escape(key)}":\s*-?[\d.]+(?:e[+-]?\d+)?'
             replacement = f'"{key}": {val}'
         new_html = re.sub(pattern, replacement, html)
         if new_html != html:
