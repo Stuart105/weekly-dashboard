@@ -326,8 +326,8 @@ def to_num(v):
 
 def bench_row(row_data):
     return {
-        'conv': to_num(row_data.get('5', 0))*100,
-        'flow': to_num(row_data.get('8', 0)),
+        'conv_rate': to_num(row_data.get('5', 0))*100,
+        'daily_flow': to_num(row_data.get('8', 0)),
         'target': to_num(row_data.get('14', 0)),
         'actual': to_num(row_data.get('17', 0)),
         'achieve': to_num(row_data.get('20', 0))*100,
@@ -353,11 +353,13 @@ if 'discount_range' in d:
 payload = {
     'store': store, 'period': period, 'week_range': week_range,
     'target': target_v, 'actual': actual_v, 'achieve': achieve_v, 'yoy': yoy_v,
-    'mom': mom_v, 'sssg': sssg_v, 'conv': conv_v, 'flow': flow_v,
-    'avg_t': avg_t, 'unit_p': unit_p, 'attach_r': attach_r, 'disc': disc_v,
+    'mom': mom_v, 'sssg': sssg_v,
+    'conv_rate': conv_v, 'daily_flow': flow_v,
+    'avg_ticket': avg_t, 'unit_price': unit_p, 'attach_rate': attach_r, 'discount': disc_v,
     'o2o': o2o_v, 'o2o_pct': o2o_pct, 'tkt_cnt': tkt_cnt, 'pad': pad_v, 'o2o_online': o2o_online,
-    'conv_yoy': conv_yoy, 'flow_yoy': flow_yoy, 'avg_t_yoy': avg_t_yoy,
-    'attach_yoy': attach_yoy, 'unit_yoy': unit_yoy, 'disc_yoy_p': disc_yoy_p, 'disc_mom': disc_mom,
+    'conv_yoy': conv_yoy, 'flow_yoy': flow_yoy, 'avg_ticket_yoy': avg_t_yoy,
+    'attach_yoy': attach_yoy, 'unit_yoy': unit_yoy,
+    'discount_yoy': disc_yoy_p, 'discount_mom': disc_mom,
     'o2o_mom': o2o_mom, 'conv_mom': conv_mom, 'flow_mom': flow_mom,
     'daily': daily_rows,
     'category': cat_data,
@@ -1049,7 +1051,7 @@ function initTables() {{
 
   // Bench table
   var bt='';
-  var kmap=[{{k:'conv','n':'成交率','pct':1}},{{k:'flow','n':'日均客流'}},{{k:'target','n':'流水目标'}},{{k:'actual','n':'流水实际'}},{{k:'achieve','n':'达成率','pct':1}},{{k:'sssg','n':'同比%','pct':1}},{{k:'mom','n':'环比%','pct':1}}];
+  var kmap=[{{k:'conv_rate','n':'成交率','pct':1}},{{k:'daily_flow','n':'日均客流'}},{{k:'target','n':'流水目标'}},{{k:'actual','n':'流水实际'}},{{k:'achieve','n':'达成率','pct':1}},{{k:'sssg','n':'同比%','pct':1}},{{k:'mom','n':'环比%','pct':1}}];
   kmap.forEach(function(item){{
     var w=D[item.k]!=null?D[item.k]:0;
     var m=D.mtd&&D.mtd[item.k]!=null?D.mtd[item.k]:0;

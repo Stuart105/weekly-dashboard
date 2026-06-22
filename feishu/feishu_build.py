@@ -92,19 +92,19 @@ SECTION1_MAP = {
     "字段 15": "sssg", "字段 16": "yoy", "字段 20": "mom",
     "字段 25": "o2o", "字段 27": "o2o_pct", "字段 28": "o2o_mom",
     "字段 29": "pad", "字段 31": "o2o_online",
-    "RGHW": "flow", "广州一区(奥莱店华南区)": "conv",
+    "RGHW": "daily_flow", "广州一区(奥莱店华南区)": "conv_rate",
     "字段 4": "conv_yoy", "字段 6": "flow_yoy",
     "字段 5": "conv_mom", "字段 18": "sssg_adj",
 }
 SECTION2_MAP = {
     # Row 12 标签: 字段3=当期, 字段4=同比, 字段10=当期, 字段13=环比, 字段15=当期, 字段16=同比
-    "字段 3":             "unit_p",      # 件单价 当期 = 132
+    "字段 3":             "unit_price",      # 件单价 当期 = 132
     "字段 4":             "unit_yoy",    # 件单价 同比 = 0.3%
-    "字段 10":            "attach_r",    # 连带率 当期 = 3.91
+    "字段 10":            "attach_rate",    # 连带率 当期 = 3.91
     "字段 13":            "attach_yoy",  # 连带率 环比 = -30.9%
     "字段 15":            "tkt_cnt",     # 交易次数 当期 = 216
     "字段 16":            "tkt_c_yoy",   # 交易次数 同比 = -18.8%
-    "字段 20":            "disc",        # 折扣率 = 44.1%
+    "字段 20":            "discount",        # 折扣率 = 44.1%
     "字段 26":            "disc_adj",    # 折扣率(剔团购) = 44.1%
 }
 
@@ -118,11 +118,11 @@ def apply_map(row, mapping, label):
 apply_map(sec1_row, SECTION1_MAP, "总体KPI")
 apply_map(sec2_row, SECTION2_MAP, "KPI细分")
 
-# avg_t: 从日别区客单价行取 周报（单位：元）字段
+# avg_ticket: 从日别区客单价行取 周报（单位：元）字段
 for row in rows:
     if get(row, "奥莱店华南区城市") == "客单价":
         v = _num(row.get("周报（单位：元）"))
-        if v: kpi_updates["avg_t"] = v
+        if v: kpi_updates["avg_ticket"] = v
         break
 
 # ── 3. 日别数据 ──
