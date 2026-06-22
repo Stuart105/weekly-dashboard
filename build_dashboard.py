@@ -131,13 +131,13 @@ conv_mom = float(r7['7'])*100; flow_mom = float(r7['12'])*100
 matrix = [
     ('流水达成率', pa(achieve_v), pct(yoy_v), pct(mom_v)),
     ('成交率', pa(conv_v), f'{pct(conv_yoy)}pp', f'{pct(conv_mom)}pp'),
-    ('日均客流', flow_v, pct(flow_yoy), pct(flow_mom)),
+    ('日均客流', f'{flow_v:,.0f}人', pct(flow_yoy), pct(flow_mom)),
     ('客单价', money(avg_t), pct(avg_t_yoy), pct(avg_t_mom)),
     ('连带率', f'{attach_r:.2f}件', pct(attach_yoy), pct(attach_mom)),
     ('件单价', money(unit_p), pct(unit_yoy), pct(unit_mom)),
     ('折扣率', pa(disc_v), f'{pct(disc_yoy_p)}pp', f'{pct(disc_mom)}pp'),
     ('O2O流水', money(o2o_v), '--', pct(o2o_mom)),
-    ('SSSG', pct(sssg_v), pct(sssg_v), pct(mom_v)),
+    ('SSSG', pct(sssg_v), '--', pct(mom_v)),
 ]
 
 # Sub-PS for 服装子品类
@@ -361,6 +361,7 @@ payload = {
     'attach_yoy': attach_yoy, 'unit_yoy': unit_yoy,
     'discount_yoy': disc_yoy_p, 'discount_mom': disc_mom,
     'o2o_mom': o2o_mom, 'conv_mom': conv_mom, 'flow_mom': flow_mom,
+    'avg_ticket_mom': avg_t_mom, 'attach_mom': attach_mom, 'unit_mom': unit_mom,
     'daily': daily_rows,
     'category': cat_data,
     'matrix': matrix,
