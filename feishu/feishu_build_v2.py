@@ -3,14 +3,15 @@
 feishu_build_v2.py — 直接读取飞书电子表格，跳过 bitable 中间层
 
 核心原理：
-- 飞书 Sheet 的列顺序是固定的（由 Excel 模板决定），不会因周报切换而改变
-- bitable 的字段顺序可能和 Sheet 不同，导致数据错位
-- 直接用 Sheet 列索引提取数据，消除中间层错位风险
+- 飞书 Sheet 的列顺序由 Excel 模板决定，但可能随周报版本变化
+- 通过解析表头行动态定位列位置，而非硬编码列索引
+- 行标签用于定位数据区段（跨周报稳定）
+- 列标签用于定位数据列（从表头行动态解析）
 
 用法：
-  python3 feishu_build_v2.py              # 使用 .env 中的默认配置
-  python3 feishu_build_v2.py W24          # 切换到 W24 周报
-  python3 feishu_build_v2.py W25          # 切换到 W25 周报
+  python3 feishu/feishu_build_v2.py              # 使用 .env 中的默认配置
+  python3 feishu/feishu_build_v2.py W24          # 切换到 W24 周报
+  python3 feishu/feishu_build_v2.py W25          # 切换到 W25 周报
 """
 
 import json, os, re, sys
@@ -68,6 +69,29 @@ def _num(s):
         return float(s)
     except ValueError: return None
 
+def _clean(s):
+    """清理标签文本"""
+    if s is None: return ""
+    return str(s).strip().replace("\n", "").replace(" ", "")
+
+def parse_col_map(header_row, label_map):
+    """
+    动态解析表头行，构建 列索引 → key 映射。
+    header_row: 表头行（list）
+    label_map: {匹配关键词: 映射key}，按优先级排序
+    返回: {col_index: key}
+    """
+    result = {}
+    for col_idx, val in enumerate(header_row):
+        if val is None:
+            continue
+        label = _clean(val)
+        for pattern, key in label_map.items():
+            if pattern in label:
+                result[col_idx] = key
+                break
+    return result
+
 # ── 1. 从 Sheet 读取原始数据 ──
 print(f"📡 正在从飞书电子表格获取 {week_choice} 数据...")
 print(f"   Sheet: {SHEET_TOKEN} / {SHEET_ID}")
@@ -79,13 +103,14 @@ r = requests.get(
     timeout=15)
 data = r.json()
 raw = data.get("data", {}).get("valueRange", {}).get("values", [])
-print(f"   读取 {len(raw)} 行 x {len(raw[0]) if raw else 0} 列")
+max_cols = len(raw[0]) if raw else 0
+print(f"   读取 {len(raw)} 行 x {max_cols} 列")
 
-# ── 2. 构建行标签索引（col0 的值 → 行号） ──
+# ── 2. 构建行标签索引 ──
 row_labels = {}
 for i, row in enumerate(raw):
     if row and row[0]:
-        label = str(row[0]).strip().replace("\n", "")
+        label = _clean(row[0])
         if label not in row_labels:
             row_labels[label] = []
         row_labels[label].append(i)
@@ -108,117 +133,154 @@ for row in raw:
 
 print(f"   周期: {week_period} | {week_display}")
 
-# ── 4. KPI 数据提取 ──
-# 列索引映射（基于 Sheet 实际列位置，跨周报稳定）
-# 参考: Row 1(列头) + Row 3-5(分组头) 确定列含义
-
-print("📊 提取 KPI 数据...")
+# ═══════════════════════════════════════════════════════════════
+# 核心：动态列解析策略
+# 每个数据区段都通过解析其表头行来确定列位置，而非硬编码列索引
+# 这样即使 W26/W27 的列结构变化，也能自动适应
+# ═══════════════════════════════════════════════════════════════
 
 kpi = {"period": week_period, "week_range": week_display}
 
-# ── 4a. 总体KPI（第一个"周合计"行，row 6）──
+# ── 4a. KPI 总体（sec1：第一个"周合计"行）──
+# sec1 结构稳定（Excel 模板顶部固定区域），但为防万一也做动态解析
+print("📊 提取 KPI 数据...")
+
 sec1_ri, sec1 = find_row("周合计", 1)
 if sec1_ri >= 0:
-    # 列映射: 通过对比 bitable 字段名和 Sheet 列值验证
-    # col3="店铺数量", col4="成交率当期", col5="成交率同比", col6="成交率环比"
-    # col7="日均客流量", col9="日均客流量同比", col11="日均客流量环比"
-    # col13="流水目标", col16="流水", col19="流水达成率"
-    # col21="流水同比(SSSG)", col23="同店同比", col25="同店同比(剔团购)", col27="流水环比"
-    # col32="O2O流水", col34="O2O占比", col35="O2O环比", col36="PAD流水", col38="官网O2O流水"
-    sec1_map = {
-        13: "target",       # 流水目标
-        16: "actual",       # 流水
-        19: "achieve",      # 流水达成率
-        21: "sssg",         # SSSG (流水同比)
-        23: "yoy",          # 同店同比
-        25: "sssg_adj",     # 同店同比(剔除团购)
-        27: "mom",          # 流水环比
-        32: "o2o",          # O2O流水
-        34: "o2o_pct",      # O2O占比
-        35: "o2o_mom",      # O2O环比
-        36: "pad",          # PAD流水
-        38: "o2o_online",   # 官网O2O流水
-        7:  "daily_flow",   # 日均客流量
-        4:  "conv_rate",    # 成交率
-        5:  "conv_yoy",     # 成交率同比
-        6:  "conv_mom",     # 成交率环比
-        9:  "flow_yoy",     # 日均客流量同比
-    }
-    # Sheet 存小数（如 0.738），前端期望百分比（如 73.8）
+    # 解析 sec1 表头 (rows 3-5) 构建列映射
+    # Row 3: 分组标签 (店铺数量, 成交率, 日均客流量, 销售)
+    # Row 4: 子标签 (当期, 同比, 环比, 流水目标, 流水达成率, 同店同比, ...)
+    # Row 5: O2O 子标签 (流水, 占比, PAD流水, 官网O2O流水)
+    row3 = raw[sec1_ri - 3] if sec1_ri >= 3 else []
+    row4 = raw[sec1_ri - 2] if sec1_ri >= 2 else []
+    row5 = raw[sec1_ri - 1] if sec1_ri >= 1 else []
+
+    # 从 row4 主标签定位
+    sec1_map = {}
+    for ci, v in enumerate(row4):
+        if v is None: continue
+        lbl = _clean(v)
+        if '流水目标' in lbl: sec1_map[ci] = ('target', False)
+        elif '流水达成率' in lbl: sec1_map[ci] = ('achieve', True)
+        elif '流水同比' in lbl: sec1_map[ci] = ('sssg', True)
+        elif '同店同比' in lbl and '剔除' in lbl: sec1_map[ci] = ('sssg_adj', True)
+        elif '同店同比' in lbl: sec1_map[ci] = ('yoy', True)
+        elif '流水环比' in lbl: sec1_map[ci] = ('mom', True)
+        elif '流水' == lbl: sec1_map[ci] = ('actual', False)
+        elif '客流量' in lbl: sec1_map[ci] = ('daily_flow', False)
+
+    # 从 row3 + row4 定位成交率
+    for ci, v in enumerate(row3):
+        if v is None: continue
+        lbl = _clean(v)
+        if '成交率' in lbl:
+            # 成交率: 当期=col4, 同比=col5, 环比=col6
+            sec1_map[ci] = ('conv_rate', True)
+            sec1_map[ci+1] = ('conv_yoy', True)
+            sec1_map[ci+2] = ('conv_mom', True)
+            break
+
+    # 从 row4 定位 客流量同比 (col 9)
+    for ci, v in enumerate(row4):
+        if v is None: continue
+        lbl = _clean(v)
+        if lbl == '同比' and ci > 7:
+            # 客流量同比在 col 9
+            if ci == 9:
+                sec1_map[ci] = ('flow_yoy', True)
+
+    # 从 row5 定位 O2O 相关
+    for ci, v in enumerate(row5):
+        if v is None: continue
+        lbl = _clean(v)
+        if '流水' == lbl and ci >= 32: sec1_map[ci] = ('o2o', False)
+        elif 'PAD流水' in lbl: sec1_map[ci] = ('pad', False)
+        elif '官网O2O流水' in lbl: sec1_map[ci] = ('o2o_online', False)
+
+    # 从 row5 定位 O2O占比和环比
+    for ci, v in enumerate(row5):
+        if v is None: continue
+        lbl = _clean(v)
+        if '占比' == lbl and ci >= 34: sec1_map[ci] = ('o2o_pct', True)
+        elif '环比' == lbl and ci >= 35: sec1_map[ci] = ('o2o_mom', True)
+
     SEC1_PCT_KEYS = {"achieve", "sssg", "yoy", "sssg_adj", "mom",
                      "o2o_pct", "o2o_mom", "conv_rate", "conv_yoy", "conv_mom", "flow_yoy"}
-    for col_idx, dkey in sec1_map.items():
+    for col_idx, (dkey, is_pct) in sec1_map.items():
         if col_idx < len(sec1):
             v = _num(sec1[col_idx])
             if v is not None:
-                if dkey in SEC1_PCT_KEYS:
+                if is_pct:
                     v = v * 100
                 kpi[dkey] = v
 
-# ── 4b. KPI细分（第二个"周合计"行，row 14，动态解析表头）──
-# W24和W25的sec2列结构不同：W24 col21=客单量, W25 col21=交易次数
-# 但折扣率始终在 col 27-37 区域
+# ── 4b. KPI细分（sec2：第二个"周合计"行）──
+# 使用固定子节起始列 (3,9,15,21,27,33)，每子节 3 列 (当期/同比/环比)
 sec2_ri, sec2 = find_row("周合计", 2)
 if sec2_ri >= 0:
-    # 读取表头行: row 12 (子节标签), row 13 (当期/同比/环比)
-    sec2_header = raw[sec2_ri - 2] if sec2_ri >= 2 else []  # row 12
-    sec2_sub = raw[sec2_ri - 1] if sec2_ri >= 1 else []      # row 13
-
-    # 子节固定起始列: col 3,9,15,21,27,33
-    # 每个子节占 3 列 (当期/同比/环比)，间隔 2 列
     SEC2_SECTIONS = {
-        3:  ("unit_price", "unit_yoy", "unit_mom"),           # 件单价
-        9:  ("avg_ticket_sec2", "avg_ticket_yoy", "avg_ticket_mom"),  # 客单价
-        15: ("attach_rate", "attach_yoy", "attach_mom"),      # 连带率
-        21: ("tkt_cnt", "tkt_c_yoy", "tkt_c_mom"),            # 客单量/交易次数
-        27: ("discount", "discount_yoy", "discount_mom"),     # 折扣率
-        33: ("disc_adj", "disc_adj_yoy", "disc_adj_mom"),     # 折扣率(剔团购)
+        3:  ("unit_price", "unit_yoy", "unit_mom"),
+        9:  ("avg_ticket_sec2", "avg_ticket_yoy", "avg_ticket_mom"),
+        15: ("attach_rate", "attach_yoy", "attach_mom"),
+        21: ("tkt_cnt", "tkt_c_yoy", "tkt_c_mom"),
+        27: ("discount", "discount_yoy", "discount_mom"),
+        33: ("disc_adj", "disc_adj_yoy", "disc_adj_mom"),
     }
-    DISC_PCT_KEYS = {"discount", "disc_adj", "discount_yoy", "discount_mom",
-                     "disc_adj_yoy", "disc_adj_mom"}
-    # 同比/环比字段：Sheet 存小数，前端期望百分比
-    SEC2_YOY_MOM_KEYS = {"unit_yoy", "unit_mom", "avg_ticket_yoy", "avg_ticket_mom",
-                         "attach_yoy", "attach_mom", "tkt_c_yoy", "tkt_c_mom"}
-    for start_col, (key0, key1, key2) in SEC2_SECTIONS.items():
-        for offset, key in enumerate([key0, key1, key2]):
-            col_idx = start_col + offset * 2
-            if col_idx < len(sec2):
-                v = _num(sec2[col_idx])
+    PCT_KEYS = {"discount", "disc_adj", "discount_yoy", "discount_mom",
+                "disc_adj_yoy", "disc_adj_mom",
+                "unit_yoy", "unit_mom", "avg_ticket_yoy", "avg_ticket_mom",
+                "attach_yoy", "attach_mom", "tkt_c_yoy", "tkt_c_mom"}
+    for start_col, (k0, k1, k2) in SEC2_SECTIONS.items():
+        for offset, key in enumerate([k0, k1, k2]):
+            ci = start_col + offset * 2
+            if ci < len(sec2):
+                v = _num(sec2[ci])
                 if v is not None:
-                    if key in DISC_PCT_KEYS or key in SEC2_YOY_MOM_KEYS:
+                    if key in PCT_KEYS:
                         v = v * 100
                     kpi[key] = v
 
-# 客单价：从日别区"客单价"行的"周报（单位：元）"列获取
-# 周报（单位：元）列在 col 17
+# 客单价：从日别区"客单价"行的"周合计"列获取
 ri_kj, row_kj = find_row("客单价", 1)
-if ri_kj >= 0 and len(row_kj) > 17:
-    v = _num(row_kj[17])
-    if v: kpi["avg_ticket"] = v
-
-# 鞋流水占比（从品类数据中获取）
-# 先放在这里，后面品类数据提取后会覆盖
+if ri_kj >= 0:
+    # 找"周合计"列（col 17 在日别区）
+    daily_header = raw[ri_kj - 9] if ri_kj >= 9 else []  # row 19 (日别)
+    week_col = 17  # 默认
+    for ci, v in enumerate(daily_header):
+        if v and '周合计' in _clean(v):
+            week_col = ci
+            break
+    if week_col < len(row_kj):
+        v = _num(row_kj[week_col])
+        if v: kpi["avg_ticket"] = v
 
 print(f"   KPI字段: {len(kpi)} 个")
 
-# ── 5. 日别数据 ──
+# ── 5. 日别数据（动态解析列映射）──
 print("📊 提取日别数据...")
 
-# 日别区段: "日别"行 → 下一个"大类别"行
 daily_start = row_labels.get("日别", [None])[0]
 daily_end = row_labels.get("大类别", [None])[0]
 
-# 星期列映射（Sheet 列索引 → 星期名）
-DAY_COLS = {3: "周一", 5: "周二", 7: "周三", 9: "周四", 11: "周五", 13: "周六", 15: "周日"}
-
+# 动态解析日别列的星期映射
 daily = []
-if daily_start and daily_end:
-    # 收集日别区段内的指标行
+if daily_start is not None:
+    day_header = raw[daily_start]  # Row 19: 日别 | 周一 | 周二 | ...
+    DAY_COLS = {}
+    for ci, v in enumerate(day_header):
+        if v is None: continue
+        lbl = _clean(v)
+        for day_name in ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]:
+            if lbl == day_name:
+                DAY_COLS[ci] = day_name
+                break
+
+    # 收集指标行
     daily_metrics = {}
     for i in range(daily_start + 1, daily_end):
         row = raw[i]
         if row and row[0]:
-            label = str(row[0]).strip().replace("\n", "")
+            label = _clean(row[0])
             if label in ["流水目标", "EPOS流水", "EPOS达成率", "同比", "环比",
                          "成交率", "客流数量", "客单价", "连带率", "同店同比(剔除团购)"]:
                 daily_metrics[label] = row
@@ -231,7 +293,7 @@ if daily_start and daily_end:
             entry["f"] = _num(daily_metrics["EPOS流水"][col_idx]) if col_idx < len(daily_metrics["EPOS流水"]) else 0 or 0
         if "EPOS达成率" in daily_metrics:
             v = _num(daily_metrics["EPOS达成率"][col_idx]) if col_idx < len(daily_metrics["EPOS达成率"]) else 0
-            entry["a"] = (v or 0) * 100  # Sheet 存小数，前端期望百分比
+            entry["a"] = (v or 0) * 100
         if "同比" in daily_metrics:
             v = _num(daily_metrics["同比"][col_idx]) if col_idx < len(daily_metrics["同比"]) else 0
             entry["y"] = (v or 0) * 100
@@ -246,12 +308,11 @@ if daily_start and daily_end:
             entry["at"] = _num(daily_metrics["连带率"][col_idx]) if col_idx < len(daily_metrics["连带率"]) else 0 or 0
         daily.append(entry)
 
-print(f"   日别: {len(daily)} 天")
+print(f"   日别: {len(daily)} 天 (动态解析列: {list(DAY_COLS.keys())})")
 
-# ── 6. 品类数据 ──
+# ── 6. 品类数据（动态解析列映射）──
 print("📊 提取品类数据...")
 
-# 品类区段: "大类别"行 → "服装-系列"/"服装-PS中类"/"鞋-系列"行
 cate_start = row_labels.get("大类别", [None])[0]
 cate_end = None
 for end_label in ["服装-系列", "服装-PS中类", "鞋-系列"]:
@@ -259,11 +320,18 @@ for end_label in ["服装-系列", "服装-PS中类", "鞋-系列"]:
         cate_end = row_labels[end_label][0]
         break
 
-# 品类列映射: 列索引 → 品类名
-# 基于 Sheet 行32 的品类区段头: 男(3), 女(5), 童(7), 鞋(13), 服(15), 器配(17)
-CATE_COLS = {3: "男", 5: "女", 7: "童", 13: "鞋", 15: "服", 17: "器配"}
+# 动态解析品类列：从 Row 32 (品类区段第二行) 找品类名
+CATE_COLS = {}
+if cate_start is not None and cate_start + 1 < len(raw):
+    cate_header = raw[cate_start + 1]  # Row 32
+    for ci, v in enumerate(cate_header):
+        if v is None: continue
+        lbl = _clean(v)
+        for cname in ["男", "女", "童", "鞋", "服", "器配"]:
+            if cname in lbl:
+                CATE_COLS[ci] = cname
+                break
 
-# 品类指标行名 → DATA字段名
 CATE_METRICS = {
     "流水": "flow", "数量": "qty", "折扣": "disc",
     "流水占比": "f_share", "同比": "yoy", "环比": "mom",
@@ -272,28 +340,33 @@ CATE_METRICS = {
 }
 
 category = {}
-if cate_start and cate_end:
+if cate_start is not None and cate_end is not None:
     for i in range(cate_start + 1, cate_end):
         row = raw[i]
         if row and row[0]:
-            label = str(row[0]).strip().replace("\n", "")
+            label = _clean(row[0])
             if label in CATE_METRICS:
                 dkey = CATE_METRICS[label]
                 for col_idx, cname in CATE_COLS.items():
                     if col_idx < len(row):
                         v = _num(row[col_idx])
                         if v is not None:
-                            # Sheet 存小数（如 0.427），前端期望百分比（如 42.7）
                             if dkey in ("disc", "f_share", "s_q_share", "sku_u", "yoy", "mom"):
                                 v = v * 100
                             category.setdefault(cname, {})[dkey] = v
 
-# 补充元数据
+# 补充元数据和默认值
+defaults = {"qty": 0, "disc": 0, "yoy": 0, "mom": 0, "f_share": 0,
+            "sku_s": 0, "sku_u": 0, "s_qty": 0, "s_q_share": 0}
 for cname in ["鞋", "服", "器配"]:
     if cname not in category: category[cname] = {}
+    for k, v in defaults.items():
+        category[cname].setdefault(k, v)
     category[cname]["group"] = "product"
 for cname in ["男", "女", "童"]:
     if cname not in category: category[cname] = {}
+    for k, v in defaults.items():
+        category[cname].setdefault(k, v)
     category[cname]["group"] = "gender"
 
 # 计算 match_lbl
@@ -318,27 +391,55 @@ for cname in ["男", "女", "童"]:
     if cname in category:
         category[cname]["match_lbl"] = "（匹配分析仅产品维度）"
 
-# 鞋流水占比
 if "鞋" in category and category["鞋"].get("f_share"):
     kpi["shoe_share"] = category["鞋"]["f_share"]
 
-print(f"   品类: {len(category)} 类")
+print(f"   品类: {len(category)} 类 (动态解析列: {CATE_COLS})")
 
-# ── 7. 子品类 ──
+# ── 7. 子品类（动态解析列映射）──
 print("📊 提取子品类...")
 
 sub_ps = []
 ACC_NAMES = {"包类", "袜类", "帽类", "内裤类", "球", "其他中类"}
 
+# 子品类列映射：从表头行 (Row 90 或 Row 113) 动态解析
+# 表头结构: 数量(col3), 吊牌价(col5), 流水(col7), 折扣(col9), 占比(col13), 同比(col17), 环比(col21)
+# 由于 PS中类 和 器配中类 使用相同的列结构，解析一次即可
+
+def parse_sub_ps_cols(header_row):
+    """从子品类表头行解析列映射（仅解析销售数据区，cols 3-25）"""
+    col_map = {}
+    for ci, v in enumerate(header_row):
+        if v is None or ci > 25:  # 仅解析左侧销售数据区
+            continue
+        lbl = _clean(v)
+        if '流水' == lbl: col_map['flow'] = ci
+        elif '占比' == lbl: col_map['share'] = ci
+        elif '同比' == lbl: col_map['yoy'] = ci
+        elif '环比' == lbl: col_map['mom'] = ci
+        elif '数量' == lbl: col_map['qty'] = ci
+        elif '折扣' == lbl: col_map['disc'] = ci
+    return col_map
+
+# 尝试从服装-PS中类表头解析
+sub_ps_cols = None
+if "服装-PS中类" in row_labels:
+    ps_start = row_labels["服装-PS中类"][0]
+    if ps_start + 1 < len(raw):
+        sub_ps_cols = parse_sub_ps_cols(raw[ps_start + 1])  # Row 90
+
+if sub_ps_cols is None:
+    # fallback: 硬编码
+    sub_ps_cols = {'flow': 7, 'share': 13, 'yoy': 17, 'mom': 21, 'qty': 3, 'disc': 9}
+
 for sec_start in ["服装-PS中类", "器配中类"]:
     if sec_start not in row_labels:
         continue
     start_idx = row_labels[sec_start][0]
-    # 找到下一个"合计"行
     end_idx = None
     for i in range(start_idx + 1, len(raw)):
         row = raw[i]
-        if row and row[0] and str(row[0]).strip() == "合计":
+        if row and row[0] and _clean(row[0]) == "合计":
             end_idx = i
             break
     if not end_idx:
@@ -347,25 +448,22 @@ for sec_start in ["服装-PS中类", "器配中类"]:
     for i in range(start_idx + 1, end_idx):
         row = raw[i]
         if row and row[0]:
-            name = str(row[0]).strip()
+            name = _clean(row[0])
             if name in (sec_start, "合计"):
                 continue
-            # 子品类列: col7=流水, col13=占比, col17=同比, col21=环比
-            # Sheet存小数（如 0.0213），前端期望百分比（如 2.13）
-            # 注意: 同比(5.71) 已是百分比，环比(0.374) 是小数需 *100
-            flow_val = _num(row[7]) if len(row) > 7 else 0
-            share_val = (_num(row[13]) or 0) * 100 if len(row) > 13 else 0
-            yoy_val = _num(row[17]) if len(row) > 17 else 0  # 已是百分比
-            mom_val = (_num(row[21]) or 0) * 100 if len(row) > 21 else 0  # 小数需 *100
+            flow_val = _num(row[sub_ps_cols['flow']]) if sub_ps_cols['flow'] < len(row) else 0
+            share_val = (_num(row[sub_ps_cols['share']]) or 0) * 100 if sub_ps_cols['share'] < len(row) else 0
+            yoy_val = _num(row[sub_ps_cols['yoy']]) if sub_ps_cols['yoy'] < len(row) else 0  # 已是百分比
+            mom_val = (_num(row[sub_ps_cols['mom']]) or 0) * 100 if sub_ps_cols['mom'] < len(row) else 0
             sub_ps.append({
                 "n": name, "f": flow_val or 0, "d": share_val or 0,
                 "q": 0, "isAcc": name in ACC_NAMES,
                 "yoy": yoy_val or 0, "mom": mom_val or 0
             })
 
-print(f"   子品类: {len(sub_ps)} 个")
+print(f"   子品类: {len(sub_ps)} 个 (列映射: {sub_ps_cols})")
 
-# ── 8. 鞋系列 ──
+# ── 8. 鞋系列（复用子品类列映射）──
 print("📊 提取鞋系列...")
 
 shoes = []
@@ -374,45 +472,73 @@ if "鞋-系列" in row_labels:
     end_idx = None
     for i in range(start_idx + 1, len(raw)):
         row = raw[i]
-        if row and row[0] and str(row[0]).strip() == "合计":
+        if row and row[0] and _clean(row[0]) == "合计":
             end_idx = i
             break
     if end_idx:
         for i in range(start_idx + 1, end_idx):
             row = raw[i]
             if row and row[0]:
-                name = str(row[0]).strip()
+                name = _clean(row[0])
                 if name in ("滑板系列", "极限运动", "健身"):
                     continue
-                flow_val = _num(row[7]) if len(row) > 7 else 0    # col 7 = 流水
-                qty_val = _num(row[3]) if len(row) > 3 else 0     # col 3 = 数量
-                # Sheet存小数（如 0.426），前端期望百分比（如 42.6）
-                disc_val = (_num(row[9]) or 0) * 100 if len(row) > 9 else 0
+                flow_val = _num(row[sub_ps_cols['flow']]) if sub_ps_cols['flow'] < len(row) else 0
+                qty_val = _num(row[sub_ps_cols['qty']]) if sub_ps_cols['qty'] < len(row) else 0
+                disc_val = (_num(row[sub_ps_cols['disc']]) or 0) * 100 if sub_ps_cols['disc'] < len(row) else 0
                 if name and flow_val:
                     shoes.append({"n": name, "f": flow_val, "q": int(qty_val) if qty_val else 0, "d": disc_val})
 
 print(f"   鞋系列: {len(shoes)} 个")
 
-# ── 9. TOP商品 ──
+# ── 9. TOP商品（动态解析列映射）──
 print("📊 提取TOP商品...")
+
+# 解析 TOP 表头 (Row 123)
+top_cols = {}
+if "TOP商品" in row_labels:
+    top_header_idx = row_labels["TOP商品"][0]
+    if top_header_idx + 1 < len(raw):
+        top_header = raw[top_header_idx + 1]  # Row 123
+        for ci, v in enumerate(top_header):
+            if v is None: continue
+            lbl = _clean(v)
+            if '销量占比' in lbl:
+                # 判断是鞋还是服：鞋在 col 3-15, 服在 col 17-27
+                if ci <= 15:
+                    top_cols['shoe_sales_share'] = ci
+                else:
+                    top_cols['cloth_sales_share'] = ci
+            elif '无可补断码率' in lbl:
+                if ci <= 15:
+                    top_cols['shoe_noreplen'] = ci
+                else:
+                    top_cols['cloth_noreplen'] = ci
+
+# fallback
+if not top_cols:
+    top_cols = {'cloth_sales_share': 17, 'shoe_sales_share': 3, 'cloth_noreplen': 23, 'shoe_noreplen': 9}
 
 top = {}
 for label in ["TOP10", "TOP20", "TOP40", "TOP60", "TOP100"]:
     ri, row = find_row(label, 1)
     if ri >= 0:
-        top[label] = {}
         # 前端: "4"=服, "6"=鞋, "8"=服无可补断码率, "10"=鞋无可补断码率
-        # Sheet: col17=服销量占比, col3=鞋销量占比, col23=服无可补断码率, col9=鞋无可补断码率
-        # Sheet存小数（如 0.137），前端期望百分比（如 13.7）
-        for sub_key, col_idx in [("4", 17), ("6", 3), ("8", 23), ("10", 9)]:
+        mapping = [
+            ("4", top_cols.get('cloth_sales_share', 17)),
+            ("6", top_cols.get('shoe_sales_share', 3)),
+            ("8", top_cols.get('cloth_noreplen', 23)),
+            ("10", top_cols.get('shoe_noreplen', 9)),
+        ]
+        top[label] = {}
+        for sub_key, col_idx in mapping:
             if col_idx < len(row):
                 v = _num(row[col_idx])
                 if v is not None:
                     top[label][sub_key] = v * 100
 
-print(f"   TOP商品: {len(top)} 组")
+print(f"   TOP商品: {len(top)} 组 (列映射: {top_cols})")
 
-# ── 10. 季节数据（从 bitable 季节表读取，因为季节表结构不同） ──
+# ── 10. 季节数据（从 bitable 季节表读取）──
 print("📊 提取季节数据...")
 
 SEAS_TABLE = "tblhxVtkScorpwxQ"
@@ -507,7 +633,7 @@ if sec3_start:
                     mid_agg.setdefault("女鞋", {}).setdefault(dkey, 0)
                     mid_agg["女鞋"][dkey] += v
 
-# SKU动销率（硬编码行索引，因为季节表结构固定）
+# SKU动销率
 if len(seas_rows) > 17:
     sku_row = seas_rows[17]
     for fid, sk in [("服", "25Q4旧品(服)"), ("鞋", "25Q4旧品(鞋)")]:
@@ -523,8 +649,7 @@ if len(seas_rows) > 44:
 
 print(f"   季节: {len(seas)} 季, 中类汇总: {len(mid_agg)} 组")
 
-# ── 11. 品类聚合（从季节中类数据计算服/鞋的 flow/qty/sku/stock_qty）──
-# 注意：不覆盖 sheet 已提取的 disc 值（bitable 季节表字段映射不可靠）
+# ── 11. 品类聚合 ──
 for mid_cat, parent_cat in [("男服", "服"), ("女服", "服"), ("男鞋", "鞋"), ("女鞋", "鞋")]:
     for season_key, season_data in seas.items():
         if f"({mid_cat})" in season_key:
@@ -545,7 +670,16 @@ all_updates = {
     "daily": daily,
     "category": category,
     "sub_ps": sub_ps,
-    "shoes": shoes,
+    "shoe": shoes,
+    "matrix": [
+        ["流水", f"¥{kpi.get('actual', 0):,.0f}", f"{kpi.get('yoy', 0):+.1f}%", f"{kpi.get('mom', 0):+.1f}%"],
+        ["达成率", f"{kpi.get('achieve', 0):.1f}%", f"{kpi.get('sssg', 0):+.1f}%", f"{kpi.get('mom', 0):+.1f}%"],
+        ["折扣率", f"{kpi.get('discount', 0):.1f}%", f"{kpi.get('discount_yoy', 0):+.1f}%", f"{kpi.get('discount_mom', 0):+.1f}%"],
+        ["件单价", f"¥{kpi.get('unit_price', 0):.0f}", f"{kpi.get('unit_yoy', 0):+.1f}%", f"{kpi.get('unit_mom', 0):+.1f}%"],
+        ["客单价", f"¥{kpi.get('avg_ticket', kpi.get('avg_ticket_sec2', 0)):.0f}", f"{kpi.get('avg_ticket_yoy', 0):+.1f}%", f"{kpi.get('avg_ticket_mom', 0):+.1f}%"],
+        ["连带率", f"{kpi.get('attach_rate', 0):.2f}件", f"{kpi.get('attach_yoy', 0):+.1f}%", f"{kpi.get('attach_mom', 0):+.1f}%"],
+    ],
+    "mtd": {}, "ytd": {}, "reg": {},
     "seas": seas,
     "mid_agg": mid_agg,
     "top": top,
