@@ -9,9 +9,11 @@ feishu_build_v2.py — 直接读取飞书电子表格，跳过 bitable 中间层
 - 列标签用于定位数据列（从表头行动态解析）
 
 用法：
-  python3 feishu/feishu_build_v2.py              # 使用 .env 中的默认配置
-  python3 feishu/feishu_build_v2.py W24          # 切换到 W24 周报
-  python3 feishu/feishu_build_v2.py W25          # 切换到 W25 周报
+  python3 feishu/feishu_build_v2.py              # 自动匹配云盘最新周报（推荐）
+  python3 feishu/feishu_build_v2.py --auto       # 同上的显式写法
+  python3 feishu/feishu_build_v2.py W24          # 手动指定 W24 周报
+  python3 feishu/feishu_build_v2.py W25          # 手动指定 W25 周报
+  python3 feishu/feishu_build_v2.py --list       # 列出云盘中所有周报文件
 """
 
 import json, os, re, sys
@@ -25,19 +27,15 @@ APP_ID = os.environ.get("FEISHU_APP_ID", "cli_a931cdfb8bf89bb5")
 APP_SECRET = os.environ.get("FEISHU_APP_SECRET", "")
 BASE_ID = os.environ.get("FEISHU_BASE_ID", "XJAZbw1rqaWHMnsVAJIci7ttnJd")
 
-# 周报配置（Sheet Token → Sheet ID）
+# 云盘文件夹 Token（从飞书云盘 URL 中提取）
+# https://ncnefidnowjl.feishu.cn/drive/folder/O7etfItlNl7CLedE04kc2ZHUncM
+FOLDER_TOKEN = os.environ.get("FEISHU_FOLDER_TOKEN", "O7etfItlNl7CLedE04kc2ZHUncM")
+
+# 手动周报配置（作为 fallback）
 WEEK_CONFIG = {
     "W24": ("JKjNsGqhfhmhG1tbijocjHAUnMd", "0jrzud"),
     "W25": ("BReJss39ah5PfytirOfcDThansj", "0kOHQv"),
 }
-
-# 从命令行参数或环境变量获取周报选择
-week_choice = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("FEISHU_WEEK", "W25")
-if week_choice not in WEEK_CONFIG:
-    print(f"❌ 未知周报: {week_choice}，可选: {list(WEEK_CONFIG.keys())}")
-    sys.exit(1)
-
-SHEET_TOKEN, SHEET_ID = WEEK_CONFIG[week_choice]
 
 if not APP_SECRET:
     env_file = BASE / '.env'
@@ -73,6 +71,124 @@ def _clean(s):
     """清理标签文本"""
     if s is None: return ""
     return str(s).strip().replace("\n", "").replace(" ", "")
+
+# ── 云盘扫描与自动匹配 ──
+def list_folder_files(folder_token, token):
+    """列出云盘文件夹中的所有文件"""
+    r = requests.get("https://open.feishu.cn/open-apis/drive/v1/files",
+        headers={"Authorization": token},
+        params={"folder_token": folder_token, "page_size": 50},
+        timeout=10)
+    if r.status_code != 200:
+        print(f"⚠️ 云盘 API 返回 {r.status_code}: {r.text[:200]}")
+        return []
+    resp = r.json()
+    if resp.get("code") != 0:
+        print(f"⚠️ 云盘 API 错误: {resp.get('msg', '')}")
+        return []
+    return resp.get("data", {}).get("files", [])
+
+def get_sheet_id(spreadsheet_token, token):
+    """获取电子表格的第一个 sheet_id"""
+    r = requests.get(
+        f"https://open.feishu.cn/open-apis/sheets/v3/spreadsheets/{spreadsheet_token}/sheets/query",
+        headers={"Authorization": token}, timeout=10)
+    if r.status_code != 200:
+        return None
+    resp = r.json()
+    sheets = resp.get("data", {}).get("sheets", [])
+    if sheets:
+        return sheets[0]["sheet_id"]
+    return None
+
+def scan_latest_week(folder_token, token):
+    """扫描云盘文件夹，返回最新周报的 (spreadsheet_token, sheet_id, week_name)"""
+    files = list_folder_files(folder_token, token)
+    if not files:
+        print("⚠️ 云盘文件夹为空或无法访问")
+        return None, None, None
+
+    # 筛选周报文件：文件名匹配 "W\d+周报" 或 "W\d+" 格式
+    week_files = []
+    for f in files:
+        name = f.get("name", "")
+        m = re.search(r'(W\d+)', name, re.IGNORECASE)
+        if m and f.get("type") == "sheet":
+            week_num = int(m.group(1)[1:])  # 提取数字部分
+            week_files.append({
+                "week_name": m.group(1).upper(),
+                "week_num": week_num,
+                "name": name,
+                "token": f["token"],
+                "modified_time": int(f.get("modified_time", 0)),
+            })
+
+    if not week_files:
+        print("⚠️ 文件夹中未找到周报文件（文件名需包含 W+数字 格式）")
+        return None, None, None
+
+    # 按 W 数字降序排列（最新的在前）
+    week_files.sort(key=lambda x: (-x["week_num"], -x["modified_time"]))
+
+    latest = week_files[0]
+    print(f"🔍 找到 {len(week_files)} 个周报文件，最新: {latest['name']} ({latest['week_name']})")
+
+    # 获取 sheet_id
+    sheet_id = get_sheet_id(latest["token"], token)
+    if not sheet_id:
+        print(f"⚠️ 无法获取 {latest['name']} 的 sheet_id")
+        return None, None, None
+
+    return latest["token"], sheet_id, latest["week_name"]
+
+def list_all_weeks(folder_token, token):
+    """列出云盘中所有周报文件"""
+    files = list_folder_files(folder_token, token)
+    if not files:
+        print("⚠️ 云盘文件夹为空或无法访问")
+        return
+
+    week_files = []
+    for f in files:
+        name = f.get("name", "")
+        m = re.search(r'(W\d+)', name, re.IGNORECASE)
+        if m and f.get("type") == "sheet":
+            week_files.append({
+                "week_name": m.group(1).upper(),
+                "name": name,
+                "token": f["token"],
+                "modified_time": int(f.get("modified_time", 0)),
+            })
+
+    week_files.sort(key=lambda x: x["week_name"])
+    print(f"\n📁 云盘文件夹中的周报文件 ({len(week_files)} 个):")
+    print(f"   {'周报':<8} {'文件名':<20} {'Token':<40}")
+    print(f"   {'-'*8} {'-'*20} {'-'*40}")
+    for wf in week_files:
+        print(f"   {wf['week_name']:<8} {wf['name']:<20} {wf['token']:<40}")
+
+# ── 周报选择逻辑 ──
+arg = sys.argv[1] if len(sys.argv) > 1 else ""
+
+if arg == "--list":
+    list_all_weeks(FOLDER_TOKEN, TOKEN)
+    sys.exit(0)
+
+if arg in ("", "--auto"):
+    # 自动模式：扫描云盘获取最新周报
+    print("🔄 自动模式：扫描云盘获取最新周报...")
+    SHEET_TOKEN, SHEET_ID, week_choice = scan_latest_week(FOLDER_TOKEN, TOKEN)
+    if not SHEET_TOKEN:
+        print("❌ 自动匹配失败，请手动指定周报（如: python3 feishu/feishu_build_v2.py W25）")
+        sys.exit(1)
+elif arg in WEEK_CONFIG:
+    # 手动模式
+    week_choice = arg
+    SHEET_TOKEN, SHEET_ID = WEEK_CONFIG[week_choice]
+else:
+    print(f"❌ 未知参数: {arg}")
+    print(f"   用法: python3 feishu/feishu_build_v2.py [--auto|--list|W24|W25]")
+    sys.exit(1)
 
 def parse_col_map(header_row, label_map):
     """
