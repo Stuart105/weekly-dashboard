@@ -98,14 +98,21 @@ SECTION1_MAP = {
 }
 SECTION2_MAP = {
     # Row 12 标签: 字段3=当期, 字段4=同比, 字段10=当期, 字段13=环比, 字段15=当期, 字段16=同比
-    "字段 3":             "unit_price",      # 件单价 当期 = 132
-    "字段 4":             "unit_yoy",    # 件单价 同比 = 0.3%
-    "字段 10":            "attach_rate",    # 连带率 当期 = 3.91
-    "字段 13":            "attach_yoy",  # 连带率 环比 = -30.9%
-    "字段 15":            "tkt_cnt",     # 交易次数 当期 = 216
-    "字段 16":            "tkt_c_yoy",   # 交易次数 同比 = -18.8%
-    "字段 20":            "discount",        # 折扣率 = 44.1%
-    "字段 26":            "disc_adj",    # 折扣率(剔团购) = 44.1%
+    "字段 3":             "unit_price",      # 件单价 当期 = 113
+    "字段 4":             "unit_yoy",        # 件单价 同比 = -14.4%
+    "字段 9":             "unit_mom",        # 件单价环比 = -15.0%
+    "字段 10":            "attach_rate",     # 连带率 当期 = 4.08
+    "字段 13":            "attach_yoy",      # 连带率 同比 = -9.0%
+    "字段 15":            "tkt_cnt",         # 交易次数 当期 = 276
+    "字段 16":            "tkt_c_yoy",       # 交易次数 同比 = -10.7%
+    "字段 20":            "discount",        # 折扣率 = 42.2%
+    "字段 24":            "discount_yoy",    # 折扣率同比 = -0.9%
+    "字段 26":            "disc_adj",        # 折扣率(剔团购) = 42.2%
+    "字段 30":            "discount_mom",    # 折扣率环比 = -0.9%
+    "字段 6":             "avg_ticket_sec2", # 客单价(从细分区段) = 463
+    "字段 22":            "avg_ticket_yoy",  # 客单价同比 = -1.3%
+    "字段 28":            "avg_ticket_mom",  # 客单价环比 = -1.3%
+    "RGHW":               "attach_mom",      # 连带率环比 = -6.6%
 }
 
 kpi_updates = {"period": week_period, "week_range": week_range}
@@ -159,10 +166,9 @@ for i, (fid, day_name) in enumerate(DAY_COLS.items()):
     daily.append(entry)
 
 # ── 4. 品类数据 ──
-# Category columns: 字段 9=鞋, 字段 13=服, 字段 15=器配, 字段 3=男, 字段 4=女, 字段 6=童
-CATE_COLS = {"字段 9": "鞋", "字段 13": "服", "字段 15": "器配",
-             "字段 3": "男", "字段 4": "女", "字段 6": "童"}
-category = {}
+# 品类数据从季节表的中类数据聚合得到（男服+女服=服，男鞋+女鞋=鞋）
+# 器配数据仍从大类别表提取
+# 注意：此部分依赖第9部分的季节数据提取，因此品类聚合逻辑移至季节数据提取之后
 
 # 品类指标映射: feishu行类型 → (DATA字段名, 默认值)
 CATE_METRICS = {
@@ -174,22 +180,40 @@ CATE_METRICS = {
 }
 PRODUCT_CATS = {"鞋", "服", "器配"}
 
-# 为每个品类初始化默认值，区分产品组和性别组
-for cname in CATE_COLS.values():
+# 初始化品类数据结构（器配和性别组数据在此提取，鞋服数据在季节数据提取后聚合）
+category = {}
+for cname in ["鞋", "服", "器配", "男", "女", "童"]:
     entry = {dk: dv for _, (dk, dv) in CATE_METRICS.items()}
     entry["group"] = "product" if cname in PRODUCT_CATS else "gender"
     category[cname] = entry
 
+# 器配数据从大类别表提取
 in_category = False
 for row in rows:
     city = get(row, "奥莱店华南区城市") or ""
     if city == "大类别":
-        in_category = True
-    if city == "服装-PS中类":
-        break  # 品类区结束
+        in_category = True; continue
+    if city in ("服装-PS中类", "鞋-系列", "器配中类"):
+        if in_category: break  # 品类区结束
     if in_category and city in CATE_METRICS:
         dkey, _ = CATE_METRICS[city]
-        for fid, cname in CATE_COLS.items():
+        # 只提取器配数据（字段 15）
+        v = getn(row, "字段 15")
+        if v is not None:
+            category["器配"][dkey] = v
+
+# 性别组数据从大类别表提取
+in_category = False
+for row in rows:
+    city = get(row, "奥莱店华南区城市") or ""
+    if city == "大类别":
+        in_category = True; continue
+    if city in ("服装-PS中类", "鞋-系列", "器配中类"):
+        if in_category: break
+    if in_category and city in CATE_METRICS:
+        dkey, _ = CATE_METRICS[city]
+        # 男=字段3, 女=字段4, 童=字段6
+        for fid, cname in [("字段 3", "男"), ("字段 4", "女"), ("字段 6", "童")]:
             v = getn(row, fid)
             if v is not None:
                 category[cname][dkey] = v
@@ -226,6 +250,9 @@ if "鞋" in category and category["鞋"].get("f_share"):
 sub_ps = []
 sub_sections = [("服装-PS中类", "器配中类"), ("器配中类", "TOP商品")]  # (start, end)
 
+# 配件类名称列表（用于区分子品类是服装还是配件）
+ACC_NAMES = {"包类", "袜类", "帽类", "内裤类", "球", "其他中类"}
+
 for sec_start, sec_end in sub_sections:
     in_section = False
     for row in rows:
@@ -246,10 +273,13 @@ for sec_start, sec_end in sub_sections:
         yoy_val = getn(row, "字段 13") or 0     # 同比(剔除团购)
         mom_val = getn(row, "字段 15") or 0     # 环比
 
+        # 判断是否为配件类
+        is_accessory = name in ACC_NAMES
+
         # 所有中类都包含(含无数据项)
         sub_ps.append({
             "n": name, "f": flow_val, "d": share_val,
-            "q": 0, "isAcc": False,  # q=数量(飞书无此数据)
+            "q": 0, "isAcc": is_accessory,  # q=数量(飞书无此数据)
             "yoy": yoy_val, "mom": mom_val
         })
 
@@ -290,12 +320,12 @@ disc_range = None  # 保留 DATA 中已有的 disc_range
 
 # ── 9. 季节数据 (从 tblhxVtkScorpwxQ 产品季节表, 3段) ──
 SEAS_TABLE = "tblhxVtkScorpwxQ"
-# 段1列映射: 总服 + 总鞋
+# 段1列映射: 总服 + 总鞋 → 使用 (服)/(鞋) 命名，与前端渲染一致
 SEC1_COLS = {
-    "服": "2025Q4及以前(总服)", "字段 4": "2026Q1(总服)", "字段 6": "2026Q2(总服)",
-    "字段 8": "2026Q3+(总服)", "字段 11": "26年常青(总服)",
-    "鞋": "2025Q4及以前(总鞋)", "字段 15": "2026Q1(总鞋)", "字段 17": "2026Q2(总鞋)",
-    "字段 19": "2026Q3+(总鞋)", "字段 22": "26年常青(总鞋)",
+    "服": "2025Q4及以前(服)", "字段 4": "2026Q1(服)", "字段 6": "2026Q2(服)",
+    "字段 8": "2026Q3+(服)", "字段 11": "26年常青(服)",
+    "鞋": "2025Q4及以前(鞋)", "字段 15": "2026Q1(鞋)", "字段 17": "2026Q2(鞋)",
+    "字段 19": "2026Q3+(鞋)", "字段 22": "26年常青(鞋)",
 }
 # 段2(男服/女服): 服=男服, 鞋=女服 → 字段4/6/8/11=男服各季, 15/17/19/22=女服各季
 SEC2_COLS_MALE = {
@@ -349,16 +379,22 @@ if sec2_start:
         if mn == "大类别": break  # 段2结束
         if mn in SEAS_METRICS:
             dkey, _ = SEAS_METRICS[mn]
-            # 男服
+            # 男服 - 聚合所有指标到 mid_agg
             for fid, sk in SEC2_COLS_MALE.items():
                 v = _num(row.get(fid))
-                if v is not None: seas.setdefault(sk, {})[dkey] = v
-                if dkey == "f" and v: mid_agg.setdefault("男服", {}).setdefault("f", 0); mid_agg["男服"]["f"] += v
-            # 女服
+                if v is not None:
+                    seas.setdefault(sk, {})[dkey] = v
+                    # 聚合到 mid_agg["男服"]
+                    mid_agg.setdefault("男服", {}).setdefault(dkey, 0)
+                    mid_agg["男服"][dkey] += v
+            # 女服 - 聚合所有指标到 mid_agg
             for fid, sk in SEC2_COLS_FEMALE.items():
                 v = _num(row.get(fid))
-                if v is not None: seas.setdefault(sk, {})[dkey] = v
-                if dkey == "f" and v: mid_agg.setdefault("女服", {}).setdefault("f", 0); mid_agg["女服"]["f"] += v
+                if v is not None:
+                    seas.setdefault(sk, {})[dkey] = v
+                    # 聚合到 mid_agg["女服"]
+                    mid_agg.setdefault("女服", {}).setdefault(dkey, 0)
+                    mid_agg["女服"][dkey] += v
 
 # 段3: 行54-79 (男鞋+女鞋) — 从第三个"大类别"行之后
 sec3_start = next((i for i,r in enumerate(seas_rows) if r.get("大类别","") == "大类别" and i > sec2_start), None) if sec2_start else None
@@ -368,16 +404,22 @@ if sec3_start:
         if mn == "大类别": break
         if mn in SEAS_METRICS:
             dkey, _ = SEAS_METRICS[mn]
-            # 男鞋
+            # 男鞋 - 聚合所有指标到 mid_agg
             for fid, sk in SEC3_COLS_MALE.items():
                 v = _num(row.get(fid))
-                if v is not None: seas.setdefault(sk, {})[dkey] = v
-                if dkey == "f" and v: mid_agg.setdefault("男鞋", {}).setdefault("f", 0); mid_agg["男鞋"]["f"] += v
-            # 女鞋
+                if v is not None:
+                    seas.setdefault(sk, {})[dkey] = v
+                    # 聚合到 mid_agg["男鞋"]
+                    mid_agg.setdefault("男鞋", {}).setdefault(dkey, 0)
+                    mid_agg["男鞋"][dkey] += v
+            # 女鞋 - 聚合所有指标到 mid_agg
             for fid, sk in SEC3_COLS_FEMALE.items():
                 v = _num(row.get(fid))
-                if v is not None: seas.setdefault(sk, {})[dkey] = v
-                if dkey == "f" and v: mid_agg.setdefault("女鞋", {}).setdefault("f", 0); mid_agg["女鞋"]["f"] += v
+                if v is not None:
+                    seas.setdefault(sk, {})[dkey] = v
+                    # 聚合到 mid_agg["女鞋"]
+                    mid_agg.setdefault("女鞋", {}).setdefault(dkey, 0)
+                    mid_agg["女鞋"][dkey] += v
 
 # su(售罄率)计算
 for key, sd in seas.items():
@@ -385,6 +427,38 @@ for key, sd in seas.items():
         sd["su"] = round(sd.get("f", 0) / sd["tag_price"] * 100, 2)
     else: sd["su"] = 0
     sd.setdefault("sat", 0); sd.setdefault("stock_qty", sd.get("stock_qty", 0))
+
+# ── 4.1 品类数据聚合（从季节表中类数据） ──
+# 服 = 男服 + 女服
+for mid_cat in ["男服", "女服"]:
+    for season_key, season_data in seas.items():
+        if f"({mid_cat})" in season_key:
+            category["服"]["flow"] += season_data.get("f", 0)
+            category["服"]["qty"] += season_data.get("q", 0)
+            category["服"]["sku_s"] += season_data.get("sku", 0)
+            category["服"]["s_qty"] += season_data.get("stock_qty", 0)
+            # 折扣率加权平均
+            if season_data.get("f", 0) > 0:
+                category["服"]["disc"] += season_data.get("d", 0) * season_data.get("f", 0)
+
+# 鞋 = 男鞋 + 女鞋
+for mid_cat in ["男鞋", "女鞋"]:
+    for season_key, season_data in seas.items():
+        if f"({mid_cat})" in season_key:
+            category["鞋"]["flow"] += season_data.get("f", 0)
+            category["鞋"]["qty"] += season_data.get("q", 0)
+            category["鞋"]["sku_s"] += season_data.get("sku", 0)
+            category["鞋"]["s_qty"] += season_data.get("stock_qty", 0)
+            # 折扣率加权平均
+            if season_data.get("f", 0) > 0:
+                category["鞋"]["disc"] += season_data.get("d", 0) * season_data.get("f", 0)
+
+# 计算加权平均折扣率
+for cat in ["服", "鞋"]:
+    if category[cat]["flow"] > 0:
+        category[cat]["disc"] = category[cat]["disc"] / category[cat]["flow"]
+    else:
+        category[cat]["disc"] = 0
 
 # sku_u 补充: 从季节表 SKU动销率行取总服/总鞋/男/女
 # 行18(总段) → 服/鞋; 行45(男服/女服) → 男/女
@@ -397,6 +471,49 @@ for fid, cname in [("服", "男"), ("鞋", "女")]:
     if v and cname in category:
         if category[cname].get("sku_u", 0) == 0: category[cname]["sku_u"] = v
 
+# ── 10. 生成 KPI Matrix ──
+def _pct(v): return f"{v:.1f}%" if v >= 0 else f"{v:.1f}%"
+def _pp(v): return f"{v:.2f}pp" if v >= 0 else f"{v:.2f}pp"
+def _money(v): return f"¥{v:,.0f}"
+
+ach_v = kpi_updates.get("achieve", 0)
+yoy_v = kpi_updates.get("yoy", 0)
+mom_v = kpi_updates.get("mom", 0)
+conv_v = kpi_updates.get("conv_rate", 0)
+conv_yoy = kpi_updates.get("conv_yoy", 0)
+conv_mom = kpi_updates.get("conv_mom", 0)
+flow_v = kpi_updates.get("daily_flow", 0)
+flow_yoy = kpi_updates.get("flow_yoy", 0)
+flow_mom = kpi_updates.get("flow_mom", 0)
+avg_t = kpi_updates.get("avg_ticket", 0)
+avg_t_yoy = kpi_updates.get("avg_ticket_yoy", 0)
+avg_t_mom = kpi_updates.get("avg_ticket_mom", 0)
+attach_r = kpi_updates.get("attach_rate", 0)
+attach_yoy = kpi_updates.get("attach_yoy", 0)
+attach_mom = kpi_updates.get("attach_mom", 0)
+unit_p = kpi_updates.get("unit_price", 0)
+unit_yoy = kpi_updates.get("unit_yoy", 0)
+unit_mom = kpi_updates.get("unit_mom", 0)
+disc_v = kpi_updates.get("discount", 0)
+disc_yoy_p = kpi_updates.get("discount_yoy", 0)
+disc_mom_p = kpi_updates.get("discount_mom", 0)
+o2o_v = kpi_updates.get("o2o", 0)
+o2o_yoy = 0  # not available from feishu
+o2o_mom = kpi_updates.get("o2o_mom", 0)
+sssg_v = kpi_updates.get("sssg", 0)
+
+matrix = [
+    ['流水达成率', _pct(ach_v), _pct(yoy_v), _pct(mom_v)],
+    ['成交率', f"{conv_v:.2f}%", f"{conv_yoy:.2f}pp", f"{conv_mom:.2f}pp"],
+    ['日均客流', f"{flow_v:,.0f}人", _pct(flow_yoy), _pct(flow_mom)],
+    ['客单价', _money(avg_t), _pct(avg_t_yoy), _pct(avg_t_mom)],
+    ['连带率', f"{attach_r:.2f}件", _pct(attach_yoy), _pct(attach_mom)],
+    ['件单价', _money(unit_p), _pct(unit_yoy), _pct(unit_mom)],
+    ['折扣率', f"{disc_v:.2f}%", f"{disc_yoy_p:.2f}pp", f"{disc_mom_p:.2f}pp"],
+    ['O2O流水', _money(o2o_v), '--', _pct(o2o_mom)],
+    ['SSSG', _pct(sssg_v), '--', _pct(mom_v)],
+]
+
 # ── 构建最终 DATA 更新 ──
 all_updates = dict(kpi_updates)
 all_updates["daily"] = daily
@@ -406,6 +523,7 @@ all_updates["shoe"] = shoes
 all_updates["top"] = top
 all_updates["seas"] = seas
 all_updates["mid_agg"] = mid_agg
+all_updates["matrix"] = matrix
 # disc_range 暂不更新
 
 # ── 更新 HTML ──
