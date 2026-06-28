@@ -165,8 +165,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
       <div class="chart-wrap"><canvas id="chartSeasFlow"></canvas></div>
       <div class="chart-wrap"><canvas id="chartSeasRate"></canvas></div>
     </div>
-    <div class="grid2" style="margin-top:14px;gap:16px">
-      <div>
+    <div style="margin-top:14px">
+      <div style="margin-bottom:20px">
         <h4 style="font-size:14px;margin-bottom:8px;color:var(--blue)">👕 服 季节对比</h4>
         <table class="tbl" style="width:100%">
           <thead><tr><th>指标</th><th>25Q4旧品</th><th>26Q1</th><th>26Q2</th><th>26Q3+</th><th>26常青</th></tr></thead>
@@ -209,14 +209,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
         <table class="tbl"><thead><tr><th>品类</th><th>流水</th><th>销量</th><th>折扣</th></tr></thead><tbody id="subAcc"></tbody></table>
       </div>
     </div>
-  </div>
-  <hr style="border:none;border-top:1px dashed var(--border);margin:18px 0">
-
-  <div id="tab-bench" class="data-tab">
-    <table class="tbl">
-      <thead><tr><th>指标</th><th>本周</th><th>月累计(06月)</th><th>vs本周</th><th>年累计(YTD)</th><th>vs本周</th><th>区域均值(19店)</th><th>vs本周</th></tr></thead>
-      <tbody id="benchTable"></tbody>
-    </table>
   </div>
 </div>
 
@@ -281,10 +273,10 @@ function initTables() {
         +'<td>'+cd.s_qty.toLocaleString()+'</td><td>'+cd.s_q_share.toFixed(2)+'%</td><td class="'+mcls+'">'+cd.match_lbl+'</td></tr>';
     }else{
       const ycls=(cd.yoy||0)>0?'hi':'lo', mcls=(cd.mom||0)>0?'hi':'lo';
-      ct+='<tr><td>'+cn+'</td><td>¥'+cd.flow.toLocaleString()+'</td><td>'+(cd.qty?cd.qty.toLocaleString():'—')+'</td><td>'+(cd.f_share||0).toFixed(2)+'%</td>'
+      ct+='<tr><td>'+cn+'</td><td>¥'+cd.flow.toLocaleString()+'</td><td>'+((cd.qty||0).toLocaleString())+'</td><td>'+(cd.f_share||0).toFixed(2)+'%</td>'
         +'<td class="'+ycls+'">'+((cd.yoy||0)>0?'+':'')+(cd.yoy||0).toFixed(2)+'%</td><td class="'+mcls+'">'+((cd.mom||0)>0?'+':'')+(cd.mom||0).toFixed(2)+'%</td>'
-        +'<td>'+(cd.disc?cd.disc.toFixed(2)+'%':'—')+'</td><td>'+(cd.sku_s?cd.sku_s:'—')+'</td><td>'+(cd.sku_u&&cd.sku_u>0?cd.sku_u.toFixed(2)+'%':'—')+'</td>'
-        +'<td>'+(cd.s_qty?cd.s_qty.toLocaleString():'—')+'</td><td>'+(cd.s_q_share?cd.s_q_share.toFixed(2)+'%':'—')+'</td><td style="color:#94a3b8;font-size:11px">（匹配分析仅产品维度）</td></tr>';
+        +'<td>'+((cd.disc||0).toFixed(2)+'%')+'</td><td>'+((cd.sku_s||0).toLocaleString())+'</td><td>'+((cd.sku_u||0)>0?(cd.sku_u||0).toFixed(2)+'%':'—')+'</td>'
+        +'<td>'+((cd.s_qty||0).toLocaleString())+'</td><td>'+((cd.s_q_share||0).toFixed(2)+'%')+'</td><td style="color:#94a3b8;font-size:11px">（匹配分析仅产品维度）</td></tr>';
     }
   }
   document.getElementById('cateTable').innerHTML=ct;
@@ -292,7 +284,7 @@ function initTables() {
   // Season tables — dynamically generated from DATA.seas
   const cLabels=['2025Q4及以前(服)','2026Q1(服)','2026Q2(服)','2026Q3+(服)','26年常青(服)'];
   const sLabels=['2025Q4及以前(鞋)','2026Q1(鞋)','2026Q2(鞋)','2026Q3+(鞋)','26年常青(鞋)'];
-  const seasMetrics=[['流水','f','money'],['销量','q','num'],['环比','mom','pct'],['SKU数','sku','num'],['库存量','stock_qty','num'],['折扣率','d','pct_abs'],['动销率','su','pct_abs']];
+  const seasMetrics=[['流水','f','money'],['销量','q','num'],['环比','mom','pct'],['SKU数','sku','num'],['库存量','stock_qty','num'],['折扣率','d','pct_abs']];
   function seasCell(v,typ){if(v===undefined||v===null||v==='')return'—';if(typ==='pct'){const vv=Number(v);return'<td class="'+(vv>0?'hi':'lo')+'">'+(vv>0?'+':'')+vv.toFixed(1)+'%</td>';}if(typ==='pct_abs')return'<td>'+Number(v).toFixed(1)+'%</td>';if(typ==='money')return'<td>¥'+Number(v).toLocaleString()+'</td>';if(typ==='num')return'<td>'+Math.round(Number(v)).toLocaleString()+'</td>';return'<td>'+v+'</td>';}
   let cTable='',sTable='';
   for(const [mName,mKey,mTyp] of seasMetrics){ cTable+='<tr><td>'+mName+'</td>'; sTable+='<tr><td>'+mName+'</td>'; for(const lb of cLabels){cTable+=seasCell(DATA.seas[lb]?DATA.seas[lb][mKey]:null,mTyp);} for(const lb of sLabels){sTable+=seasCell(DATA.seas[lb]?DATA.seas[lb][mKey]:null,mTyp);} cTable+='</tr>'; sTable+='</tr>';}
@@ -301,15 +293,15 @@ function initTables() {
 
   // Mid-category table (from mid_agg + seas data)
   const midKeys=['男服','女服','男鞋','女鞋'];
-  const midMetrics=[['流水','f','money'],['销量','q','num'],['环比','mom','pct'],['SKU数','sku','num'],['库存量','stock_qty','num'],['折扣率','d','pct_abs'],['动销率','su','pct_abs']];
+  const midMetrics=[['流水','f','money'],['销量','q','num'],['环比','mom','pct'],['SKU数','sku','num'],['库存量','stock_qty','num'],['折扣率','d','pct_abs']];
   let midHtml='';
   for(const [mName,mKey,mTyp] of midMetrics){
     midHtml+='<tr><td>'+mName+'</td>';
     for(const mk of midKeys){
       const sd=D.seas||{};
       let val=0;
-      // 对于折扣率和动销率，使用加权平均（基于流水）
-      if(mKey==='d'||mKey==='su'){
+      // 对于折扣率，使用加权平均（基于流水）
+      if(mKey==='d'){
         let weightedSum=0, totalFlow=0;
         for(const[sk,sv]of Object.entries(sd)){
           if(sk.includes('('+mk+')')&&sv.f>0){
@@ -346,35 +338,16 @@ function initTables() {
   }
   document.getElementById('midTable').innerHTML=midHtml;
 
-  // Sub tables — split by clothing/accessory categories
+  // Sub tables — split by clothing/accessory categories, sorted by flow
   const accNames=['包类','袜类','帽类','内裤类','球','其他中类'];
-  const clothSubs=D.sub_ps.filter(r=>!accNames.includes(r.n));
-  const accSubs=D.sub_ps.filter(r=>accNames.includes(r.n));
-  let sc=''; clothSubs.forEach(r=>{ sc+='<tr><td>'+r.n+'</td><td>¥'+r.f.toLocaleString()+'</td><td>'+(r.q?r.q.toLocaleString():'—')+'</td><td>'+(r.d||0).toFixed(2)+'%</td></tr>'; });
+  const clothSubs=D.sub_ps.filter(r=>!accNames.includes(r.n)).sort((a,b)=>b.f-a.f);
+  const accSubs=D.sub_ps.filter(r=>accNames.includes(r.n)).sort((a,b)=>b.f-a.f);
+  let sc=''; clothSubs.forEach(r=>{ sc+='<tr><td>'+r.n+'</td><td>¥'+r.f.toLocaleString()+'</td><td>'+(r.q||0).toLocaleString()+'</td><td>'+(r.d||0).toFixed(2)+'%</td></tr>'; });
   document.getElementById('subCloth').innerHTML=sc;
-  let ss=''; D.shoe.forEach(r=>{ ss+='<tr><td>'+r.n+'</td><td>¥'+r.f.toLocaleString()+'</td><td>'+r.q+'</td><td>'+(r.d||0).toFixed(2)+'%</td></tr>'; });
+  let ss=''; D.shoe.sort((a,b)=>b.f-a.f).forEach(r=>{ ss+='<tr><td>'+r.n+'</td><td>¥'+r.f.toLocaleString()+'</td><td>'+r.q+'</td><td>'+(r.d||0).toFixed(2)+'%</td></tr>'; });
   document.getElementById('subShoe').innerHTML=ss||'<tr><td colspan="4">导入后解析</td></tr>';
-  let sa=''; accSubs.forEach(r=>{ sa+='<tr><td>'+r.n+'</td><td>¥'+r.f.toLocaleString()+'</td><td>'+(r.q?r.q.toLocaleString():'—')+'</td><td>'+(r.d||0).toFixed(2)+'%</td></tr>'; });
+  let sa=''; accSubs.forEach(r=>{ sa+='<tr><td>'+r.n+'</td><td>¥'+r.f.toLocaleString()+'</td><td>'+(r.q||0).toLocaleString()+'</td><td>'+(r.d||0).toFixed(2)+'%</td></tr>'; });
   document.getElementById('subAcc').innerHTML=sa;
-
-  // Bench table
-  var bt='';
-  var kmap=[{k:'conv_rate','n':'成交率','pct':1},{k:'daily_flow','n':'日均客流'},{k:'target','n':'流水目标'},{k:'actual','n':'流水实际'},{k:'achieve','n':'达成率','pct':1},{k:'sssg','n':'同比%','pct':1},{k:'mom','n':'环比%','pct':1}];
-  kmap.forEach(function(item){
-    var w=D[item.k]!=null?D[item.k]:0;
-    var m=D.mtd&&D.mtd[item.k]!=null?D.mtd[item.k]:0;
-    var y=D.ytd&&D.ytd[item.k]!=null?D.ytd[item.k]:0;
-    var r=D.reg&&D.reg[item.k]!=null?D.reg[item.k]:0;
-    var fw=item.pct?w.toFixed(1)+'%':(w>=10000?'¥'+w.toLocaleString():'¥'+w.toFixed(0));
-    var fm=item.pct?m.toFixed(1)+'%':(m>=10000?'¥'+m.toLocaleString():'¥'+m.toFixed(0));
-    var fy=item.pct?y.toFixed(1)+'%':(y>=10000?'¥'+y.toLocaleString():'¥'+y.toFixed(0));
-    var fr=item.pct?r.toFixed(1)+'%':(r>=10000?'¥'+r.toLocaleString():'¥'+r.toFixed(0));
-    var dw=item.pct?(m-w).toFixed(1)+'pp':((m-w)>=0?'+':'')+(m-w).toFixed(0);
-    var dy=item.pct?(y-w).toFixed(1)+'pp':((y-w)>=0?'+':'')+(y-w).toFixed(0);
-    var dr=item.pct?(r-w).toFixed(1)+'pp':((r-w)>=0?'+':'')+(r-w).toFixed(0);
-    bt+='<tr><td>'+item.n+'</td><td>'+fw+'</td><td>'+fm+'</td><td>'+dw+'</td><td>'+fy+'</td><td>'+dy+'</td><td>'+fr+'</td><td>'+dr+'</td></tr>';
-  });
-  document.getElementById('benchTable').innerHTML=bt||'<tr><td colspan="8">导入后解析</td></tr>';
 
 }
 
