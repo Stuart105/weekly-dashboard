@@ -23,13 +23,13 @@ jobs:
       - name: 安装依赖
         run: pip install requests
 
-      - name: 从飞书获取数据并更新仪表板
+      - name: 从飞书云盘自动匹配最新周报并更新仪表板
         env:
           FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
-          # 以下已有默认值，如需覆盖可在仓库 Secrets 中设置
           FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID || 'cli_a931cdfb8bf89bb5' }}
           FEISHU_BASE_ID: ${{ secrets.FEISHU_BASE_ID || 'XJAZbw1rqaWHMnsVAJIci7ttnJd' }}
-        run: python feishu/feishu_build.py
+          FEISHU_FOLDER_TOKEN: ${{ secrets.FEISHU_FOLDER_TOKEN || 'O7etfItlNl7CLedE04kc2ZHUncM' }}
+        run: python feishu/feishu_build_v2.py
 
       - name: 提交并推送更新
         run: |
