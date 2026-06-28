@@ -37,12 +37,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 .tag-down{background:var(--green-bg);color:#065f46;padding:1px 8px;border-radius:12px;font-size:11px}
 .tag-neutral{background:#f1f5f9;color:#475569;padding:1px 8px;border-radius:12px;font-size:11px}
 
-/* Tabs */
-.tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px}
-.tab{padding:8px 18px;border-radius:8px 8px 0 0;cursor:pointer;font-size:13px;font-weight:600;color:var(--sub);background:transparent;border:none;border-bottom:2px solid transparent;transition:.2s}
-.tab.active{color:var(--blue);border-bottom-color:var(--blue);background:var(--blue-bg)}
-.tab:hover:not(.active){color:var(--text);background:#f8fafc}
-
 /* Cards */
 .section{background:var(--card);border-radius:12px;padding:22px 26px;margin-bottom:14px;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,.04)}
 .section h3{font-size:16px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
@@ -129,16 +123,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 <!-- ─── SECTION 2: DATA FILTERING ─── -->
 <div class="section">
   <h3>📊 数据筛选展示</h3>
-  <div class="tabs">
-    <button class="tab active" onclick="switchDataTab('daily',this)">日别趋势</button>
-    <button class="tab" onclick="switchDataTab('matrix',this)">KPI矩阵</button>
-    <button class="tab" onclick="switchDataTab('cate',this)">品类分析</button>
-    <button class="tab" onclick="switchDataTab('seas',this)">新品季节</button>
-    <button class="tab" onclick="switchDataTab('mid',this)">中类分析</button>
-    <button class="tab" onclick="switchDataTab('sub',this)">子品类</button>
-  </div>
-
-  <!-- DATA TAB CONTENTS -->
+  <!-- DATA TAB CONTENTS — sequential, no tabs -->
   <div id="tab-daily" class="data-tab">
     <div class="grid2">
       <div class="chart-wrap"><canvas id="chartDailyFlow"></canvas></div>
@@ -153,15 +138,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
       <tbody id="dailyTable"></tbody>
     </table>
   </div>
+  <hr style="border:none;border-top:1px dashed var(--border);margin:18px 0">
 
-  <div id="tab-matrix" class="data-tab" style="display:none">
+  <div id="tab-matrix" class="data-tab">
     <table class="tbl">
       <thead><tr><th>指标</th><th>本周值</th><th>同比</th><th>环比</th><th>趋势</th></tr></thead>
       <tbody id="matrixTable"></tbody>
     </table>
   </div>
+  <hr style="border:none;border-top:1px dashed var(--border);margin:18px 0">
 
-  <div id="tab-cate" class="data-tab" style="display:none">
+  <div id="tab-cate" class="data-tab">
     <div class="grid2">
       <div class="chart-wrap"><canvas id="chartCateFlow"></canvas></div>
       <div class="chart-wrap"><canvas id="chartCateMatch"></canvas></div>
@@ -171,8 +158,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
       <tbody id="cateTable"></tbody>
     </table>
   </div>
+  <hr style="border:none;border-top:1px dashed var(--border);margin:18px 0">
 
-  <div id="tab-seas" class="data-tab" style="display:none">
+  <div id="tab-seas" class="data-tab">
     <div class="grid2">
       <div class="chart-wrap"><canvas id="chartSeasFlow"></canvas></div>
       <div class="chart-wrap"><canvas id="chartSeasRate"></canvas></div>
@@ -194,17 +182,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
       </div>
     </div>
   </div>
+  <hr style="border:none;border-top:1px dashed var(--border);margin:18px 0">
 
   <!-- ─── MID-CATEGORY TAB ─── -->
-  <div id="tab-mid" class="data-tab" style="display:none">
+  <div id="tab-mid" class="data-tab">
     <div class="chart-wrap" style="margin-bottom:12px"><canvas id="chartMidCloth"></canvas></div>
     <table class="tbl" style="width:100%">
       <thead><tr><th>指标</th><th>男服</th><th>女服</th><th>男鞋</th><th>女鞋</th></tr></thead>
       <tbody id="midTable"></tbody>
     </table>
   </div>
+  <hr style="border:none;border-top:1px dashed var(--border);margin:18px 0">
 
-  <div id="tab-sub" class="data-tab" style="display:none">
+  <div id="tab-sub" class="data-tab">
     <div class="grid3">
       <div>
         <h4 style="font-size:13px;margin-bottom:8px;color:var(--sub)">服装子品类</h4>
@@ -220,8 +210,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
       </div>
     </div>
   </div>
+  <hr style="border:none;border-top:1px dashed var(--border);margin:18px 0">
 
-  <div id="tab-bench" class="data-tab" style="display:none">
+  <div id="tab-bench" class="data-tab">
     <table class="tbl">
       <thead><tr><th>指标</th><th>本周</th><th>月累计(06月)</th><th>vs本周</th><th>年累计(YTD)</th><th>vs本周</th><th>区域均值(19店)</th><th>vs本周</th></tr></thead>
       <tbody id="benchTable"></tbody>
@@ -247,23 +238,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Micr
 <!-- ─── DATA PAYLOAD ─── -->
 <script>
 const DATA = {"store": "奥莱店华南区城市", "period": "W25", "week_range": "20260615→20260621", "daily_flow": 245.14, "target": 167199.71, "actual": 123337.0, "achieve": 73.76627626925908, "sssg": -24.249185, "yoy": -24.249185, "sssg_adj": -24.249185, "mom": 25.315824999999997, "conv_rate": 16.083916000000002, "conv_yoy": -3.497833, "conv_mom": -1.951967, "flow_yoy": 8.745247, "o2o": 6054.0, "pad": 1376.0, "o2o_online": 2759.0, "o2o_pct": 4.80110392082223, "o2o_mom": 146.6992665036675, "unit_price": 113.48, "unit_yoy": -14.427404, "unit_mom": -6.554166, "avg_ticket_sec2": 462.54, "avg_ticket_yoy": -13.568873, "avg_ticket_mom": -15.010947999999999, "attach_rate": 4.08, "attach_yoy": 1.003277, "attach_mom": -9.049928999999999, "tkt_cnt": 276.0, "tkt_c_yoy": -10.679611999999999, "tkt_c_mom": 44.502618, "discount": 42.215856, "discount_yoy": -1.327234, "discount_mom": -0.943647, "disc_adj": 42.215856, "disc_adj_yoy": -1.327234, "disc_adj_mom": -0.943647, "avg_ticket": 462.536231884058, "shoe_share": 51.816568, "daily": [{"n": "周一", "t": 10473.59, "f": 4912.0, "a": 46.898914316867476, "y": -70.166336, "c": 18.840580000000003, "v": 69.0, "tk": 299.0, "at": 2.85}, {"n": "周二", "t": 10191.06, "f": 12407.0, "a": 121.74395990211029, "y": 17.084655, "c": 22.891566, "v": 83.0, "tk": 641.32, "at": 6.11}, {"n": "周三", "t": 10706.89, "f": 8306.0, "a": 77.57621494196727, "y": -27.477517000000002, "c": 17.5, "v": 80.0, "tk": 593.29, "at": 5.93}, {"n": "周四", "t": 9532.64, "f": 13075.0, "a": 137.1603249467094, "y": 18.492244, "c": 21.212121, "v": 99.0, "tk": 578.05, "at": 5.48}, {"n": "周五", "t": 48582.93, "f": 34414.0, "a": 70.83557949263249, "y": -1.578676, "c": 14.869888000000001, "v": 538.0, "tk": 430.38, "at": 3.7}, {"n": "周六", "t": 44756.46, "f": 34974.0, "a": 78.1429094258125, "y": -23.908824, "c": 15.042734999999999, "v": 585.0, "tk": 428.07, "at": 3.58}, {"n": "周日", "t": 32956.14, "f": 15249.0, "a": 46.27058872792748, "y": -58.89425000000001, "c": 15.648855000000001, "v": 262.0, "tk": 464.46, "at": 3.98}], "category": {"男": {"flow": 80706.0, "qty": 787.0, "disc": 42.12790251296841, "mom": 16.29956251847217, "yoy": -26.19276923987222, "f_share": 65.43535200000001, "sku_s": 357.0, "s_qty": 12085.0, "s_q_share": 64.391818, "sku_u": 0, "group": "gender", "match_lbl": "（匹配分析仅产品维度）"}, "女": {"flow": 31783.0, "qty": 273.0, "disc": 42.85878286158909, "mom": 33.22853789403085, "yoy": -27.818912975494587, "f_share": 25.769234, "sku_s": 160.0, "s_qty": 5167.0, "s_q_share": 23.802826, "sku_u": 0, "group": "gender", "match_lbl": "（匹配分析仅产品维度）"}, "童": {"flow": 10848.0, "f_share": 8.996666000000001, "s_q_share": 11.805356, "qty": 0, "disc": 0, "yoy": 0, "mom": 0, "sku_s": 0, "sku_u": 0, "s_qty": 0, "group": "gender", "match_lbl": "（匹配分析仅产品维度）"}, "鞋": {"flow": 63909.0, "qty": 359.0, "disc": 42.94065080527578, "mom": 27.792441511697664, "yoy": -21.134583945410604, "f_share": 51.816568, "sku_s": 148.0, "sku_u": 46.540880503139995, "s_qty": 5626.0, "s_q_share": 52.181977999999994, "group": "product", "gap": -0.3654099999999971, "match_lbl": "匹配", "f": 59770.0, "q": 334.0, "sku": 125.0, "stock_qty": 4781.0}, "服": {"flow": 51115.0, "qty": 511.0, "disc": 42.68511636840391, "mom": 28.578482680831808, "yoy": -31.76483906166942, "f_share": 41.443362, "sku_s": 297.0, "sku_u": 45.55214723926, "s_qty": 9587.0, "s_q_share": 40.739859, "group": "product", "gap": 0.7035029999999978, "match_lbl": "匹配", "f": 51115.0, "q": 511.0, "sku": 297.0, "stock_qty": 9587.0}, "器配": {"flow": 8313.0, "qty": 215.0, "disc": 35.257443379421495, "mom": -2.623872554761626, "yoy": 20.93764866252824, "f_share": 6.740069999999999, "sku_s": 87.0, "sku_u": 26.524390243899997, "s_qty": 2563.0, "s_q_share": 7.078163, "group": "product", "gap": -0.33809300000000064, "match_lbl": "匹配"}}, "sub_ps": [{"n": "裙类", "f": 1087.0, "d": 2.1265773256382667, "q": 0, "isAcc": false, "yoy": 5.709876543209877, "mom": 37.420986093552465}, {"n": "编织衫", "f": 0, "d": 0, "q": 0, "isAcc": false, "yoy": 0, "mom": 0}, {"n": "比赛套", "f": 4132.0, "d": 8.083732759463953, "q": 0, "isAcc": false, "yoy": 0.39384575943004796, "mom": 87.90957420199824}, {"n": "短裤", "f": 9120.98, "d": 17.84403795363396, "q": 0, "isAcc": false, "yoy": -0.13214606163194198, "mom": 29.559375}, {"n": "短袖", "f": 19544.02, "d": 38.235390785483716, "q": 0, "isAcc": false, "yoy": -0.45851030641347673, "mom": 10.262454160789845}, {"n": "紧身衣裤", "f": 0, "d": 0, "q": 0, "isAcc": false, "yoy": 0, "mom": 0}, {"n": "棉服", "f": 0, "d": 0, "q": 0, "isAcc": false, "yoy": 0, "mom": 0}, {"n": "七分裤", "f": 1813.0, "d": 3.5469040399100065, "q": 0, "isAcc": false, "yoy": 0.8076854049095659, "mom": 232.05128205128207}, {"n": "其它", "f": 161.0, "d": 0.31497603443216277, "q": 0, "isAcc": false, "yoy": -0.8971094793484027, "mom": -35.6}, {"n": "三合一", "f": 0, "d": 0, "q": 0, "isAcc": false, "yoy": 0, "mom": 0}, {"n": "梭织长裤", "f": 8379.0, "d": 16.392448400665167, "q": 0, "isAcc": false, "yoy": -0.337590232479819, "mom": 72.62051915945612}, {"n": "外套", "f": 1769.0, "d": 3.460823632984447, "q": 0, "isAcc": false, "yoy": -0.643945462669624, "mom": 10.218068535825545}, {"n": "卫裤", "f": 4932.0, "d": 9.648831067201408, "q": 0, "isAcc": false, "yoy": 0.08457341651621472, "mom": 3.962900505902192}, {"n": "卫衣", "f": 0, "d": 0, "q": 0, "isAcc": false, "yoy": 0, "mom": 0}, {"n": "羽绒服", "f": 0, "d": 0, "q": 0, "isAcc": false, "yoy": 0, "mom": 0}, {"n": "长袖", "f": 177.0, "d": 0.3462780005869118, "q": 0, "isAcc": false, "yoy": -0.6049107142857143, "mom": 0}, {"n": "其他中类", "f": 0, "d": 0, "q": 0, "isAcc": true, "yoy": 0, "mom": 0}, {"n": "包类", "f": 1780.0, "d": 21.41224587994707, "q": 0, "isAcc": true, "yoy": -0.2587101556708673, "mom": -17.820867959372112}, {"n": "袜类", "f": 4912.0, "d": 59.08817514735956, "q": 0, "isAcc": true, "yoy": 0.8977194141486727, "mom": 66.56493726687013}, {"n": "帽类", "f": 941.0, "d": 11.319619872488873, "q": 0, "isAcc": true, "yoy": -0.1056833301653678, "mom": 74.25925925925925}, {"n": "内裤类", "f": 0, "d": 0, "q": 0, "isAcc": true, "yoy": 0, "mom": 0}, {"n": "球", "f": 0, "d": 0, "q": 0, "isAcc": true, "yoy": 0, "mom": 0}, {"n": "其他中类", "f": 680.0, "d": 8.1799591002045, "q": 0, "isAcc": true, "yoy": -0.18269230769230768, "mom": -76.40527411519777}], "shoe": [{"n": "篮球", "f": 6554.0, "q": 21, "d": 42.61655504259055}, {"n": "跑步", "f": 25277.0, "q": 92, "d": 51.159731217616574}, {"n": "韦德", "f": 1893.0, "q": 5, "d": 48.6007702182285}, {"n": "运动生活", "f": 24478.0, "q": 211, "d": 37.72288061150581}, {"n": "户外", "f": 2593.0, "q": 16, "d": 27.05550918196995}, {"n": "其他", "f": 3114.0, "q": 14, "d": 54.86257928118393}], "matrix": [["流水", "¥123,337", "-24.2%", "+25.3%"], ["达成率", "73.8%", "-24.2%", "+25.3%"], ["折扣率", "42.2%", "-1.3%", "-0.9%"], ["件单价", "¥113", "-14.4%", "-6.6%"], ["客单价", "¥463", "-13.6%", "-15.0%"], ["连带率", "4.08件", "+1.0%", "-9.0%"]], "mtd": {}, "ytd": {}, "reg": {}, "seas": {"2025Q4及以前(服)": {"tag_price": 78295.0, "f": 27614.0, "q": 315.0, "d": 35.3, "mom": 58.9, "yoy": -63.1, "fs": 54.0, "sku": 180.0, "stock_amt": 1444976.0, "stock_qty": 5714.0}, "2026Q1(服)": {"tag_price": 6222.0, "f": 3123.0, "q": 28.0, "d": 50.2, "mom": 3.2, "fs": 6.1, "sku": 20.0, "stock_amt": 207512.0, "stock_qty": 748.0}, "2026Q2(服)": {"tag_price": 22591.0, "f": 12925.0, "q": 65.0, "d": 57.2, "mom": 33.1, "fs": 25.3, "sku": 65.0, "stock_amt": 402897.0, "stock_qty": 1813.0}, "2026Q3+(服)": {"tag_price": 646.0, "f": 472.0, "q": 4.0, "d": 73.1, "mom": -20.7, "fs": 0.9, "sku": 4.0, "stock_amt": 18457.0, "stock_qty": 93.0}, "26年常青(服)": {"tag_price": 11995.0, "f": 6981.0, "q": 55.0, "d": 58.2, "mom": -22.8, "fs": 13.7, "sku": 28.0, "stock_amt": 299531.0, "stock_qty": 1219.0}, "2025Q4及以前(鞋)": {"tag_price": 73053.0, "f": 25760.0, "q": 52.0, "d": 35.3, "mom": 15.8, "yoy": -68.2, "fs": 40.3, "sku": 52.0, "stock_amt": 1372318.0, "stock_qty": 2052.0}, "2026Q1(鞋)": {"tag_price": 24848.0, "f": 11639.0, "q": 38.0, "d": 46.8, "mom": 114.1, "fs": 18.2, "sku": 38.0, "stock_amt": 670651.0, "stock_qty": 1359.0}, "2026Q2(鞋)": {"tag_price": 3095.0, "f": 1528.0, "q": 6.0, "d": 49.4, "mom": 175.8, "fs": 2.4, "sku": 6.0, "stock_amt": 122168.0, "stock_qty": 232.0}, "26年常青(鞋)": {"tag_price": 47835.0, "f": 24982.0, "q": 52.0, "d": 52.2, "mom": 14.7, "fs": 39.1, "sku": 52.0, "stock_amt": 874817.0, "stock_qty": 1983.0}, "2026Q3+(鞋)": {"q": 0.0, "sku": 0.0}, "2025Q4及以前(男服)": {"tag_price": 52222.0, "f": 18811.0, "q": 208.0, "d": 36.0, "mom": 43.7, "yoy": -67.8, "fs": 51.1, "sku": 111.0, "stock_amt": 908438.0, "stock_qty": 3392.0}, "2026Q1(男服)": {"tag_price": 4081.0, "f": 2077.0, "q": 19.0, "d": 50.9, "mom": 10.9, "fs": 5.6, "sku": 14.0, "stock_amt": 136220.0, "stock_qty": 490.0}, "2026Q2(男服)": {"tag_price": 16989.0, "f": 9754.0, "q": 81.0, "d": 57.4, "mom": 32.9, "fs": 26.5, "sku": 42.0, "stock_amt": 294753.0, "stock_qty": 1257.0}, "2026Q3+(男服)": {"tag_price": 507.0, "f": 378.0, "q": 3.0, "d": 74.6, "mom": 3.3, "fs": 1.0, "sku": 3.0, "stock_amt": 13959.0, "stock_qty": 71.0}, "26年常青(男服)": {"tag_price": 9953.0, "f": 5791.0, "q": 47.0, "d": 58.2, "mom": -21.6, "fs": 15.7, "sku": 22.0, "stock_amt": 236312.0, "stock_qty": 988.0}, "2025Q4及以前(女服)": {"tag_price": 26073.0, "f": 8803.0, "q": 107.0, "d": 33.8, "mom": 105.5, "yoy": -46.6, "fs": 61.5, "sku": 69.0, "stock_amt": 536538.0, "stock_qty": 2322.0}, "2026Q1(女服)": {"tag_price": 2141.0, "f": 1046.0, "q": 9.0, "d": 48.9, "mom": -9.3, "fs": 7.3, "sku": 6.0, "stock_amt": 71292.0, "stock_qty": 258.0}, "2026Q2(女服)": {"tag_price": 5602.0, "f": 3171.0, "q": 28.0, "d": 56.6, "mom": 33.7, "fs": 22.2, "sku": 23.0, "stock_amt": 108144.0, "stock_qty": 556.0}, "2026Q3+(女服)": {"tag_price": 139.0, "f": 94.0, "q": 1.0, "d": 67.6, "mom": -59.0, "fs": 0.7, "sku": 1.0, "stock_amt": 4498.0, "stock_qty": 22.0}, "26年常青(女服)": {"tag_price": 2042.0, "f": 1190.0, "q": 8.0, "d": 58.3, "mom": -28.2, "fs": 8.3, "sku": 6.0, "stock_amt": 63219.0, "stock_qty": 231.0}, "2025Q4及以前(男鞋)": {"tag_price": 55193.0, "f": 19796.0, "q": 97.0, "d": 35.9, "mom": 7.2, "yoy": -59.3, "fs": 48.0, "sku": 32.0, "stock_amt": 1069364.0, "stock_qty": 1456.0}, "2026Q1(男鞋)": {"tag_price": 13974.0, "f": 6217.0, "q": 26.0, "d": 44.5, "mom": 47.5, "fs": 15.1, "sku": 21.0, "stock_amt": 411467.0, "stock_qty": 793.0}, "2026Q2(男鞋)": {"tag_price": 1897.0, "f": 818.0, "q": 3.0, "d": 43.1, "mom": 47.7, "fs": 2.0, "sku": 4.0, "stock_amt": 72064.0, "stock_qty": 136.0}, "26年常青(男鞋)": {"tag_price": 27287.0, "f": 14439.0, "q": 113.0, "d": 52.9, "mom": 31.2, "fs": 35.0, "sku": 21.0, "stock_amt": 411467.0, "stock_qty": 793.0}, "2025Q4及以前(女鞋)": {"tag_price": 10377.0, "f": 3576.0, "q": 23.0, "d": 34.5, "mom": 16.2, "yoy": -87.6, "fs": 19.3, "sku": 12.0, "stock_amt": 180060.0, "stock_qty": 340.0}, "2026Q1(女鞋)": {"tag_price": 8580.0, "f": 4031.0, "q": 20.0, "d": 47.0, "mom": 267.5, "fs": 21.8, "sku": 12.0, "stock_amt": 182227.0, "stock_qty": 373.0}, "2026Q2(女鞋)": {"tag_price": 1198.0, "f": 710.0, "q": 2.0, "d": 59.3, "fs": 3.8, "sku": 2.0, "stock_amt": 36035.0, "stock_qty": 65.0}, "26年常青(女鞋)": {"tag_price": 19750.0, "f": 10183.0, "q": 50.0, "d": 51.6, "mom": -1.3, "fs": 55.0, "sku": 21.0, "stock_amt": 351575.0, "stock_qty": 825.0}, "2026Q3+(男鞋)": {"fs": 0.0, "sku": 0.0}, "2026Q3+(女鞋)": {"fs": 0.0}, "25Q4旧品(服)": {"su": 43.2}, "25Q4旧品(鞋)": {"su": 36.6}, "25Q4旧品(男服)": {"su": 43.4}, "25Q4旧品(女服)": {"su": 42.9}}, "mid_agg": {"男服": {"tag_price": 83752.0, "f": 36811.0, "q": 358.0, "d": 277.1, "mom": 69.19999999999999, "yoy": -67.8, "fs": 99.9, "sku": 192.0, "stock_amt": 1589682.0, "stock_qty": 6198.0}, "女服": {"tag_price": 35997.0, "f": 14304.0, "q": 153.0, "d": 265.2, "mom": 42.7, "yoy": -46.6, "fs": 100.0, "sku": 105.0, "stock_amt": 783691.0, "stock_qty": 3389.0}, "男鞋": {"tag_price": 98351.0, "f": 41270.0, "q": 239.0, "d": 176.4, "mom": 133.6, "yoy": -59.3, "fs": 100.1, "sku": 78.0, "stock_amt": 1964362.0, "stock_qty": 3178.0}, "女鞋": {"tag_price": 39905.0, "f": 18500.0, "q": 95.0, "d": 192.4, "mom": 282.4, "yoy": -87.6, "fs": 99.9, "sku": 47.0, "stock_amt": 749897.0, "stock_qty": 1603.0}}, "top": {"TOP10": {"4": 13.698630136986301, "6": 40.947075208913645, "8": 0.0, "10": 0.0}, "TOP20": {"4": 20.352250489236788, "6": 48.74651810584958, "8": 15.789473684210002, "10": 5.0}, "TOP40": {"4": 35.22504892367906, "6": 63.788300835654596, "8": 9.5238095238, "10": 2.38095238095}, "TOP60": {"4": 46.96673189823875, "6": 75.76601671309191, "8": 13.432835820889999, "10": 11.475409836059999}, "TOP100": {"4": 70.64579256360078, "6": 98.05013927576601, "8": 10.88435374149, "10": 9.01639344262}}};
-
-// ─── TAB SWITCHING ───
-function switchDataTab(name, el) {
-  document.querySelectorAll('.data-tab').forEach(e=>e.style.display='none');
-  document.getElementById('tab-'+name).style.display='block';
-  document.querySelectorAll('.section:first-of-type .tab').forEach(t=>t.classList.remove('active'));
-  if(el) el.classList.add('active');
-  if(name==='daily'){ drawDailyCharts(); }
-  if(name==='cate'){ drawCateCharts(); }
-  if(name==='seas'){ drawSeasCharts(); }
-  if(name==='mid'){ drawMidCharts(); }
-}
-
-function toggleCard(el) {
-  if(window.event&&window.event.target){var tg=window.event.target;if(tg.tagName==='BUTTON'||tg.tagName==='A')return;}
-  el.classList.toggle('open');
-}
 
 // ─── RENDER TABLES ───
 function initTables() {
@@ -574,10 +548,9 @@ function drawMidCharts() {
 function refreshAllCharts() {
   Object.keys(chartInstances).forEach(k=>{chartInstances[k].destroy();delete chartInstances[k];});
   drawDailyCharts();
-  const activeTab=document.querySelector('.data-tab[style*="block"]');
-  if(activeTab&&activeTab.id==='tab-cate')drawCateCharts();
-  if(activeTab&&activeTab.id==='tab-seas')drawSeasCharts();
-  if(activeTab&&activeTab.id==='tab-mid')drawMidCharts();
+  drawCateCharts();
+  drawSeasCharts();
+  drawMidCharts();
 }
 
 function refreshFromFeishu(){
@@ -761,11 +734,6 @@ function handleFileImport(e){
       document.querySelector('.header h1').textContent='📊 '+DATA.period+' 周报分析仪表板';
       document.title=DATA.period+' 周报分析仪表板 | '+DATA.store;
       buildKpiStrip(); initTables(); refreshAllCharts();
-      document.querySelectorAll('.data-tab').forEach(e=>e.style.display='none');
-      document.getElementById('tab-daily').style.display='block';
-      const tabs=document.querySelectorAll('.section:first-of-type .tab');
-      tabs.forEach(t=>t.classList.remove('active'));
-      if(tabs[0]) tabs[0].classList.add('active');
       showToast('✅ 导入成功! '+DATA.store+' | '+DATA.week_range,'success');
     }catch(err){
       showToast('❌ 解析失败: '+err.message,'error');
@@ -1175,8 +1143,8 @@ function buildKpiStrip(){
   const D=DATA, fmt=v=>v>=10000?((v/10000).toFixed(1)+'万'):('¥'+v.toFixed(0)), pc=v=>(v>0?'+':'')+v.toFixed(1)+'%', pa=v=>v.toFixed(1)+'%', cl=v=>v>=0?'up':'down';
   // Row 1
   const h1=[];
-  h1.push('<div class="ki"><div class="kv">¥'+D.target.toLocaleString()+'</div><div class="kl">周目标</div><div class="kc neutral">周度目标</div></div>');
-  h1.push('<div class="ki"><div class="kv">¥'+D.actual.toLocaleString()+'</div><div class="kl">达成金额</div><div class="kc '+cl(D.yoy)+'">较去年同期 '+pc(D.yoy)+'</div></div>');
+  h1.push('<div class="ki"><div class="kv">¥'+Math.round(D.target).toLocaleString()+'</div><div class="kl">周目标</div><div class="kc neutral">周度目标</div></div>');
+  h1.push('<div class="ki"><div class="kv">¥'+Math.round(D.actual).toLocaleString()+'</div><div class="kl">达成金额</div><div class="kc '+cl(D.yoy)+'">较去年同期 '+pc(D.yoy)+'</div></div>');
   h1.push('<div class="ki"><div class="kv" style="color:'+(D.achieve>=100?'#22c55e':'#ef4444')+'">'+D.achieve.toFixed(1)+'%</div><div class="kl">达成率</div><div class="kc" style="color:'+(D.achieve>=100?'#22c55e':'#ef4444')+'">'+(D.achieve>=100?'超目标':'未达标')+'</div></div>');
   h1.push('<div class="ki"><div class="kv" style="color:'+(D.yoy<0?'#ef4444':'#22c55e')+'">'+pc(D.yoy)+'</div><div class="kl">流水同比</div><div class="kc '+cl(D.yoy)+'">同比去年</div></div>');
   h1.push('<div class="ki"><div class="kv" style="color:'+(D.sssg<0?'#ef4444':'#22c55e')+'">'+pc(D.sssg)+'</div><div class="kl">SSSG</div><div class="kc '+cl(D.sssg)+'">同店同比</div></div>');
@@ -1201,6 +1169,9 @@ window.addEventListener('DOMContentLoaded',()=>{
   buildKpiStrip();
   initTables();
   drawDailyCharts();
+  drawCateCharts();
+  drawSeasCharts();
+  drawMidCharts();
 });
 </script>
 </body>
